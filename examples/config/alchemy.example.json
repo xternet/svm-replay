@@ -1,0 +1,11 @@
+{
+  "id": "alchemy-mainnet",
+  "version": "v1",
+  "genesisHash": "REPLACE_WITH_VERIFIED_GENESIS_HASH",
+  "firstSlot": null,
+  "lastSlot": null,
+  "maxRequests": 100,
+  "maxAccountReads": 80,
+  "maxDownloadBytes": 134217728,
+  "maxResponseBytes": 16777216
+}

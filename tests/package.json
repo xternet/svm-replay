@@ -1,0 +1,10 @@
+{
+  "name": "svm-replay-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "layout": "node --test interfaces/layout/repository.test.mjs",
+    "test": "bun test ."
+  },
+  "devDependencies": { "lossless-json": "4.3.1" }
+}

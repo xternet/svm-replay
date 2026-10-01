@@ -1,0 +1,20 @@
+{
+  "name": "@xternet/svm-replay",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "author": "xternet",
+  "repository": { "type": "git", "url": "git+https://github.com/xternet/svm-replay.git", "directory": "src/bindings/typescript" },
+  "homepage": "https://github.com/xternet/svm-replay",
+  "bugs": { "url": "https://github.com/xternet/svm-replay/issues" },
+  "keywords": ["solana", "svm", "replay", "simulation", "debugging"],
+  "publishConfig": { "access": "public", "registry": "https://registry.npmjs.org/" },
+  "description": "Typed, CLI-backed historical Solana simulation and evidence artifacts",
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" }, "./adapters": { "types": "./dist/adapters/index.d.ts", "import": "./dist/adapters/index.js" } },
+  "files": ["dist", "install.mjs", "installation.mjs", "launcher.mjs", "README.md", "LICENSE", "NOTICE"],
+  "bin": { "svm-replay-install": "./install.mjs", "svm-replay": "./launcher.mjs" },
+  "scripts": { "build": "tsc -p tsconfig.json", "test": "npm run build && node --test tests/*.test.mjs", "prepack": "npm run build" },
+  "dependencies": { "@types/node": "22.18.6" },
+  "devDependencies": { "typescript": "5.9.3" }
+}

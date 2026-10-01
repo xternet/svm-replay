@@ -1,0 +1,17 @@
+/target/
+**/target/
+/node_modules/
+**/node_modules/
+/.svm-replay/
+/cache/
+/result/
+/results/
+.env
+.env.*
+src/bindings/typescript/dist/
+*.tgz
+*.log
+.*.sw[p-z]
+/examples/replay-config.json
+/examples/config/*.local.json
+!/examples/config/.env.example

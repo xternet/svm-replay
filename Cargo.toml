@@ -1,0 +1,89 @@
+[package]
+name = "svm-replay"
+version = "0.1.0"
+license = "Apache-2.0"
+description = "Historical Solana simulation with pinned runtimes and evidence receipts"
+edition = "2021"
+publish = ["crates-io"]
+rust-version = "1.94"
+authors = ["xternet"]
+repository = "https://github.com/xternet/svm-replay"
+homepage = "https://github.com/xternet/svm-replay"
+documentation = "https://github.com/xternet/svm-replay/tree/main/docs"
+readme = "README.md"
+keywords = ["solana", "svm", "replay", "simulation", "debugging"]
+autotests = false
+include = ["/src/cli/**", "/examples/rust/**", "/README.md", "/CHANGELOG.md", "/LICENSE", "/NOTICE"]
+
+[workspace]
+members = ["src/protocol", "src/engine", "src/store"]
+resolver = "2"
+
+[[bin]]
+name = "svm-replay"
+path = "src/cli/main.rs"
+
+[[example]]
+name = "replay-rust"
+path = "examples/rust/main.rs"
+
+[dependencies]
+svm-replay-engine = { path = "src/engine", version = "=0.1.0" }
+svm-replay-protocol = { path = "src/protocol", version = "=0.1.0" }
+svm-replay-store = { path = "src/store", version = "=0.1.0" }
+serde = { version = "=1.0.229", features = ["derive"] }
+serde_json = { version = "=1.0.149", features = ["arbitrary_precision", "raw_value"] }
+clap = { version = "=4.5.58", features = ["derive"] }
+dirs = "=6.0.0"
+libc = "=0.2.183"
+sha2 = "=0.10.9"
+dialoguer = { version = "=0.12.0", default-features = false }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "=0.61.2", features = ["Win32_Foundation", "Win32_System_Console", "Win32_System_IO", "Win32_System_Threading", "Win32_System_Pipes", "Win32_Storage_FileSystem"] }
+
+[dev-dependencies]
+base64 = "=0.22.1"
+bs58 = "=0.5.1"
+tempfile = "=3.27.0"
+
+[profile.dev]
+debug = 1
+
+# Real binary integrity checks also run in lifecycle tests. Unoptimized SHA-256
+# takes over 2s for the 61MiB debug CLI, before a child can even start. Keep the
+# same hashing, cancellation checks and test deadlines with optimized compression.
+[profile.dev.package.sha2]
+opt-level = 3
+
+[[test]]
+name = "debug_cli"
+path = "tests/interfaces/cli/debug_cli.rs"
+
+[[test]]
+name = "worker_owner"
+path = "tests/interfaces/cli/worker_owner.rs"
+
+[[test]]
+name = "windows_transport"
+path = "tests/interfaces/cli/windows_transport.rs"
+
+[[test]]
+name = "coordinator"
+path = "tests/interfaces/cli/coordinator.rs"
+
+[[test]]
+name = "cli_cancel"
+path = "tests/interfaces/cli/cli_cancel.rs"
+
+[[test]]
+name = "signature_cli"
+path = "tests/interfaces/cli/signature.rs"
+
+[[test]]
+name = "pretty_cli"
+path = "tests/interfaces/cli/pretty.rs"
+
+[[test]]
+name = "product"
+path = "tests/interfaces/packaging/product.rs"

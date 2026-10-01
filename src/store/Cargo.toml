@@ -1,0 +1,43 @@
+[package]
+name = "svm-replay-store"
+version = "0.1.0"
+license = "Apache-2.0"
+description = "Content-addressed local cache and durable receipts for SVM Replay"
+edition = "2021"
+publish = ["crates-io"]
+rust-version = "1.94"
+authors = ["xternet"]
+repository = "https://github.com/xternet/svm-replay"
+homepage = "https://github.com/xternet/svm-replay"
+documentation = "https://docs.rs/svm-replay-store"
+readme = "../../README.md"
+keywords = ["solana", "svm", "replay", "simulation", "debugging"]
+autotests = false
+
+[dependencies]
+base64 = "=0.22.1"
+rusqlite = "=0.34.0"
+serde = { version = "=1.0.229", features = ["derive"] }
+serde_json = "=1.0.149"
+sha2 = "=0.10.9"
+tempfile = "=3.27.0"
+
+[target.'cfg(windows)'.dependencies]
+# Windows does not ship sqlite3.lib; compile the pinned SQLite source locally.
+rusqlite = { version = "=0.34.0", features = ["bundled"] }
+
+# Internal compatibility executable for migration and real-process store tests.
+[[bin]]
+name = "svm-replay-store"
+path = "_8_command/mod.rs"
+
+[lib]
+path = "mod.rs"
+
+[[test]]
+name = "direct_api"
+path = "tests/direct_api.rs"
+
+[[test]]
+name = "store"
+path = "tests/store.rs"

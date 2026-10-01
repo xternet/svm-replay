@@ -1,0 +1,199 @@
+[package]
+name = "svm-replay-engine"
+version = "0.1.0"
+license = "Apache-2.0"
+description = "Historical Solana reconstruction, simulation and verification engine"
+edition = "2021"
+publish = ["crates-io"]
+rust-version = "1.94"
+authors = ["xternet"]
+repository = "https://github.com/xternet/svm-replay"
+homepage = "https://github.com/xternet/svm-replay"
+documentation = "https://docs.rs/svm-replay-engine"
+readme = "../../README.md"
+keywords = ["solana", "svm", "replay", "simulation", "debugging"]
+autotests = false
+
+[dependencies]
+svm-replay-protocol = { path = "../protocol", version = "=0.1.0" }
+svm-replay-store = { path = "../store", version = "=0.1.0" }
+serde = { version = "=1.0.229", features = ["derive"] }
+serde_json = { version = "=1.0.149", features = ["arbitrary_precision", "raw_value"] }
+sha2 = "=0.10.9"
+base64 = "=0.22.1"
+bs58 = "=0.5.1"
+bincode = "=1.3.3"
+solana-vote-interface = { version = "=2.2.6", features = ["bincode"] }
+libc = "=0.2.183"
+tempfile = "=3.27.0"
+reqwest = { version = "=0.12.28", default-features = false, features = ["blocking", "rustls-tls"] }
+object = { version = "=0.36.7", default-features = false, features = ["read_core", "elf", "std"] }
+gimli = { version = "=0.31.1", default-features = false, features = ["read", "std", "endian-reader"] }
+addr2line = { version = "=0.24.2", default-features = false, features = ["std"] }
+
+[target.'cfg(windows)'.dependencies]
+process-wrap = { version = "=9.0.1", default-features = false, features = ["tokio1", "job-object", "kill-on-drop"] }
+tokio = { version = "=1.53.1", features = ["rt", "process", "io-util", "time", "macros"] }
+
+[lib]
+path = "mod.rs"
+
+[[test]]
+name = "override_sysvars"
+path = "_shared/_4_dependencies/tests/override_sysvars.rs"
+
+[[test]]
+name = "trace_cache"
+path = "_shared/_13_trace/tests/trace_cache.rs"
+
+[[test]]
+name = "debug_session"
+path = "_shared/_3_debug/_4_session/tests/debug_session.rs"
+
+[[test]]
+name = "lifecycle"
+path = "_shared/_4_dependencies/tests/lifecycle.rs"
+
+[[test]]
+name = "catalog"
+path = "_1_resolve_runtime/tests.rs"
+
+[[test]]
+name = "debug_workflow"
+path = "_4_simulate/_4_live/tests.rs"
+
+[[test]]
+name = "trace"
+path = "_shared/_13_trace/tests/trace.rs"
+
+[[test]]
+name = "source_preparation"
+path = "_2_prepare_state/tests/source_preparation.rs"
+
+[[test]]
+name = "migration"
+path = "_shared/_0_bank/tests/migration.rs"
+
+[[test]]
+name = "fees"
+path = "_shared/_6_fees/tests/fees.rs"
+
+[[test]]
+name = "imports"
+path = "_shared/_0_bank/tests/imports.rs"
+
+[[test]]
+name = "alchemy"
+path = "_shared/_12_sources/tests/alchemy.rs"
+
+[[test]]
+name = "worker_transport"
+path = "_shared/_11_runtime/tests/worker_transport.rs"
+
+[[test]]
+name = "debug_store"
+path = "_shared/_3_debug/_5_store/tests/debug_store.rs"
+
+[[test]]
+name = "dependencies"
+path = "_shared/_4_dependencies/tests/dependencies.rs"
+
+[[test]]
+name = "bank"
+path = "_shared/_0_bank/tests/bank.rs"
+
+[[test]]
+name = "slot_hashes"
+path = "_shared/_0_bank/tests/slot_hashes.rs"
+
+[[test]]
+name = "program_header"
+path = "_shared/_0_bank/tests/program_header.rs"
+
+[[test]]
+name = "debug_store_execution"
+path = "_shared/_3_debug/_5_store/tests/debug_store_execution.rs"
+
+[[test]]
+name = "debug"
+path = "_shared/_3_debug/tests/debug.rs"
+
+[[test]]
+name = "debug_execution"
+path = "_4_simulate/_2_debug/tests/debug_execution.rs"
+
+[[test]]
+name = "verification"
+path = "_3_verify_original/tests/verification.rs"
+
+[[test]]
+name = "rent_capture"
+path = "_shared/_12_sources/tests/rent_capture.rs"
+
+[[test]]
+name = "finalization"
+path = "_5_finalize/tests.rs"
+
+[[test]]
+name = "context"
+path = "_2_prepare_state/tests/context.rs"
+
+[[test]]
+name = "requested"
+path = "_shared/_4_dependencies/tests/requested.rs"
+
+[[test]]
+name = "requirements"
+path = "_2_prepare_state/tests/requirements.rs"
+
+[[test]]
+name = "durable_rpc_budget"
+path = "_shared/_12_sources/tests/durable_rpc_budget.rs"
+
+[[test]]
+name = "sources"
+path = "_shared/_12_sources/tests/sources.rs"
+
+[[test]]
+name = "history"
+path = "_shared/_7_history/tests/history.rs"
+
+[[test]]
+name = "alt"
+path = "_shared/_4_dependencies/tests/alt.rs"
+
+[[test]]
+name = "trace_execution"
+path = "_4_simulate/_6_trace/tests/trace_execution.rs"
+
+[[test]]
+name = "stake"
+path = "_shared/_0_bank/tests/stake.rs"
+
+[[test]]
+name = "debug_source_execution"
+path = "_shared/_3_debug/_6_symbols/tests/debug_source_execution.rs"
+
+[[test]]
+name = "debug_symbols"
+path = "_shared/_3_debug/_6_symbols/tests/debug_symbols.rs"
+
+[[test]]
+name = "transaction_identity"
+path = "_2_prepare_state/tests/transaction_identity.rs"
+
+[[test]]
+name = "cached_source"
+path = "_shared/_12_sources/tests/cached_source.rs"
+
+[[test]]
+name = "discovery"
+path = "_2_prepare_state/tests/discovery.rs"
+
+[[test]]
+name = "cache"
+path = "_shared/_1_cache/tests/cache.rs"
+
+[[test]]
+name = "debug_budget"
+path = "_4_simulate/_2_debug/tests/debug_budget.rs"

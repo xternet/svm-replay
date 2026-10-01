@@ -1,0 +1,37 @@
+[package]
+name = "svm-replay-protocol"
+version = "0.1.0"
+license = "Apache-2.0"
+description = "Typed requests, runtime identities and evidence contracts for SVM Replay"
+edition = "2021"
+publish = ["crates-io"]
+rust-version = "1.94"
+authors = ["xternet"]
+repository = "https://github.com/xternet/svm-replay"
+homepage = "https://github.com/xternet/svm-replay"
+documentation = "https://docs.rs/svm-replay-protocol"
+readme = "../../README.md"
+keywords = ["solana", "svm", "replay", "simulation", "debugging"]
+autotests = false
+
+[dependencies]
+serde = { version = "=1.0.229", features = ["derive"] }
+serde_json = { version = "=1.0.149", features = ["arbitrary_precision", "raw_value"] }
+sha2 = "=0.10.9"
+base64 = "=0.22.1"
+bs58 = "=0.5.1"
+
+[lib]
+path = "mod.rs"
+
+[[test]]
+name = "runtime_binding"
+path = "tests/runtime_binding.rs"
+
+[[test]]
+name = "historical"
+path = "tests/historical.rs"
+
+[[test]]
+name = "contracts"
+path = "tests/contracts.rs"

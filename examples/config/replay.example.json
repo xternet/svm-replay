@@ -1,0 +1,12 @@
+{
+  "installation": {
+    "bundlePath": "/path/to/install/bundle.json",
+    "bundleSha256": "REPLACE_WITH_VERIFIED_BUNDLE_SHA256",
+    "source": {
+      "path": "/path/to/captured/manifest.json",
+      "sha256": "REPLACE_WITH_VERIFIED_SOURCE_SHA256"
+    },
+    "cache": "all"
+  },
+  "requestPath": "/path/to/historical-request.json"
+}

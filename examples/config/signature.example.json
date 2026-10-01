@@ -1,0 +1,8 @@
+{
+  "installation": {
+    "bundlePath": "/path/to/install/bundle.json",
+    "bundleSha256": "REPLACE_WITH_VERIFIED_BUNDLE_SHA256",
+    "cache": "all"
+  },
+  "tx": "REPLACE_WITH_HISTORICAL_TRANSACTION_SIGNATURE"
+}

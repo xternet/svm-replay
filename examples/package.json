@@ -1,0 +1,12 @@
+{
+  "name":"svm-replay-examples",
+  "private":true,
+  "type":"module",
+  "scripts": {
+    "historical": "node historical/main.mjs",
+    "surfpool": "node surfpool/main.mjs",
+    "anchor": "node anchor/main.mjs",
+    "test": "node --test shared/*.test.mjs anchor/*.test.mjs"
+  },
+  "dependencies":{"@xternet/svm-replay":"file:../src/bindings/typescript","@solana/surfpool":"1.5.0","@anchor-lang/core":"1.1.2","@solana/web3.js":"1.98.4"}
+}

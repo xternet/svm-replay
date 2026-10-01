@@ -1,0 +1,2 @@
+[scripts]
+historical = "node main.mjs ../config/replay.local.json"
