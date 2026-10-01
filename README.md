@@ -1,6 +1,8 @@
 # SVM Replay
 
 [![crates.io](https://img.shields.io/crates/v/svm-replay.svg)](https://crates.io/crates/svm-replay)
+[![npm](https://img.shields.io/npm/v/%40xternet%2Fsvm-replay.svg)](https://www.npmjs.com/package/@xternet/svm-replay)
+[![GitHub release](https://img.shields.io/github/v/release/xternet/svm-replay)](https://github.com/xternet/svm-replay/releases/latest)
 [![CI](https://github.com/xternet/svm-replay/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/xternet/svm-replay/actions/workflows/ci.yml?query=branch%3Amain)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
@@ -26,7 +28,6 @@ payload, account state or program code.
 [TypeScript SDK](https://www.npmjs.com/package/@xternet/svm-replay)
 
 Cargo builds the CLI; npm provides the SDK and launcher. Both need the **native runtime bundle**.
-The npm release is awaiting review; do not install its `0.0.0-stage` placeholder.
 
 Requirements:
 
