@@ -75,7 +75,7 @@ test("layout rules reject loose files and unowned folders", () => {
     validateNames(["result", "results"], [], ".");
     assert.throws(() => validateNames(["results"], [], "src"), /assign an owner/);
     for (const name of ["result", "results"]) {
-        assert.ok(readFileSync(resolve(root, ".gitignore"), "utf8").split("\n").includes(`/${name}/`));
+        assert.ok(readFileSync(resolve(root, ".gitignore"), "utf8").split(/\r?\n/).includes(`/${name}/`));
     }
     assert.throws(() => validateNames(["loose.rs"], ["src"], "."), /assign an owner/);
     assert.throws(() => validateNames(["misc"], ["cli", "sdk"], "tests/interfaces"), /assign an owner/);
