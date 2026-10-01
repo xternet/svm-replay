@@ -1,5 +1,9 @@
 # SVM Replay
 
+[![crates.io](https://img.shields.io/crates/v/svm-replay.svg)](https://crates.io/crates/svm-replay)
+[![CI](https://github.com/xternet/svm-replay/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/xternet/svm-replay/actions/workflows/ci.yml?query=branch%3Amain)
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+
 Replay a Solana transaction at its historical position, then test a different
 payload, account state or program code.
 
@@ -15,6 +19,14 @@ payload, account state or program code.
 - **Regression tests:** replay real cases in CI or from developer tools and agents.
 
 ## How to run
+
+[Native downloads](https://github.com/xternet/svm-replay/releases/latest) ·
+[Rust CLI](https://crates.io/crates/svm-replay) ·
+[Rust API](https://crates.io/crates/svm-replay-engine) ·
+[TypeScript SDK](https://www.npmjs.com/package/@xternet/svm-replay)
+
+Cargo builds the CLI; npm provides the SDK and launcher. Both need the **native runtime bundle**.
+The npm release is awaiting review; do not install its `0.0.0-stage` placeholder.
 
 Requirements:
 

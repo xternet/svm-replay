@@ -7,6 +7,17 @@ from implementation support. Worker binaries are reviewed/pinned separately from
 Rust callers can use the published crates or workspace path dependencies. Owned packages
 include the Apache-2.0 license and project notice.
 
+## Packages
+
+| Package | Purpose |
+|---|---|
+| [svm-replay](https://crates.io/crates/svm-replay) | Rust CLI; Cargo builds the coordinator, not runtime workers |
+| [svm-replay-engine](https://crates.io/crates/svm-replay-engine) | Rust API; Cargo resolves its protocol/store dependencies |
+| [@xternet/svm-replay](https://www.npmjs.com/package/@xternet/svm-replay) | TypeScript SDK and CLI launcher; native bundle required |
+
+The npm 0.1.0 submission is awaiting registry review. Its `0.0.0-stage` version
+is a nonfunctional placeholder; use the GitHub release's SDK archive meanwhile.
+
 The CLI crate contains the executable source and Rust example. The complete test
 suite, other packages and integration examples live in the repository checkout;
 development dependencies and generated SDK files are not shipped in the CLI crate.
