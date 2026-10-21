@@ -2,6 +2,7 @@ import hashlib
 import inspect
 import json
 import os
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -10,6 +11,19 @@ import native_matrix
 
 
 class CleanRunnerTests(unittest.TestCase):
+    def test_generated_ci_roots_are_ignored_but_the_actual_harness_is_not(self):
+        root = Path(os.environ["SVM_REPLAY_VALIDATION_SOURCE"])
+        generated = [f"tests/interfaces/packaging/native-ci/{name}/probe.json"
+                     for name in ("inputs", "work", "reports", "downloads")]
+        source = "tests/interfaces/packaging/native-ci/scripts/native_matrix.py"
+        with tempfile.TemporaryDirectory() as directory:
+            subprocess.run(["git", "init", "--quiet", directory], check=True)
+            Path(directory, ".gitignore").write_bytes((root / ".gitignore").read_bytes())
+            ignored = subprocess.check_output(["git", "-c", "core.excludesFile=/dev/null",
+                "check-ignore", "--no-index", "--stdin"], cwd=directory,
+                input="\n".join([*generated, source]) + "\n", text=True)
+            self.assertEqual(ignored.splitlines(), generated)
+
     def test_offline_package_checks_run_after_sdk_dependencies_are_installed(self):
         root = Path(os.environ["SVM_REPLAY_VALIDATION_SOURCE"])
         workflow = (root / ".github/workflows/ci.yml").read_text()

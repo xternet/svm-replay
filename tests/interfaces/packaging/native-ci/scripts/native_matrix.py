@@ -6,12 +6,12 @@ import platform
 import shutil
 import sys
 import tarfile
-import re
 from pathlib import Path
 from probe import command, safe_members
 from release_inputs import require_families, release_version, rebind_request
 from native_host import require_native_host, require_binary_arch
 from build_paths import build_environment
+from cpi_fixture import run_native_session_tests
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -154,15 +154,8 @@ def main():
             run('build-' + family, cargo + ['--target-dir', str(native_target), '--manifest-path', str(workers / build['manifest']), '--bin', package], workers, 1800)
             native_worker = work / ('native-target/release/' + package + suffix)
             require_binary_arch(native_worker, native_os, native_arch)
-            test_log = run('session-unit-' + family, ['cargo', '+1.94.0', 'test', '--release',
-                '--locked', '--jobs', '4', '--target-dir', str(native_target), '--manifest-path',
-                str(workers / build['manifest']), '--bin', package, 'm12_session',
-                '--', '--test-threads=2'], workers, 900)
-            census = re.search(r'test result: ok\. ([0-9]+) passed; 0 failed; ([0-9]+) ignored;', test_log.read_text())
-            if census is None or int(census[1]) == 0:
-                raise RuntimeError('native session unit census missing or empty: ' + family)
-            summary.setdefault('workerSessionTests', []).append({'family': family,
-                'passed': int(census[1]), 'ignored': int(census[2]), 'scope': 'synthetic native session tests'})
+            summary.setdefault('workerSessionTests', []).append(
+                run_native_session_tests(run, coordinator, workers, build, work))
             worker_pin = digest(native_worker.read_bytes())
             rows = [row for row in matrix['cases'] if row['family'] == family]
             exemplar = json.loads((fixtures / rows[0]['file']).read_bytes())

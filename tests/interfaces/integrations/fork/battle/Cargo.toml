@@ -8,6 +8,11 @@ description = "Battle-test program for historical forks (opt-in drivers only; ne
 [lib]
 crate-type = ["cdylib"]
 
+[[example]]
+name = "invoke_and_ok"
+path = "examples/invoke_and_ok.rs"
+crate-type = ["cdylib"]
+
 [dependencies]
 solana-program = "=2.3.0"
 

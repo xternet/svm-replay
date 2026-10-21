@@ -10,11 +10,16 @@ on:
         type: boolean
         required: false
         default: false
+      wsl_probe:
+        description: Probe hosted WSL2 availability only (not native qualification)
+        type: boolean
+        required: false
+        default: false
 permissions:
   contents: read
 jobs:
   portable-sdk:
-    if: github.event_name != 'workflow_dispatch' || !inputs.native
+    if: github.event_name != 'workflow_dispatch' || (!inputs.native && !inputs.wsl_probe)
     strategy:
       fail-fast: false
       matrix:
@@ -48,7 +53,7 @@ jobs:
         working-directory: src/bindings/typescript
         run: npm pack --dry-run
   offline-checks:
-    if: github.event_name != 'workflow_dispatch' || !inputs.native
+    if: github.event_name != 'workflow_dispatch' || (!inputs.native && !inputs.wsl_probe)
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -168,6 +173,17 @@ jobs:
             tests/interfaces/packaging/native-ci/reports/sdk-packed/*.tgz
           if-no-files-found: error
           retention-days: 1
+
+  wsl-consumer:
+    needs: native-candidate
+    if: github.event_name == 'workflow_dispatch' && inputs.native && !github.event.repository.private
+    uses: ./.github/workflows/wsl-consumer.yml
+
+  wsl-probe:
+    if: github.event_name == 'workflow_dispatch' && inputs.wsl_probe && !inputs.native && !github.event.repository.private
+    uses: ./.github/workflows/wsl-consumer.yml
+    with:
+      probe: true
 
   clean-consumer:
     needs: native-candidate

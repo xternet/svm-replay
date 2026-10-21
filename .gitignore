@@ -15,3 +15,7 @@ src/bindings/typescript/dist/
 /examples/replay-config.json
 /examples/config/*.local.json
 !/examples/config/.env.example
+/tests/interfaces/packaging/native-ci/inputs/
+/tests/interfaces/packaging/native-ci/work/
+/tests/interfaces/packaging/native-ci/reports/
+/tests/interfaces/packaging/native-ci/downloads/

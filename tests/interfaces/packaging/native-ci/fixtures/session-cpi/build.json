@@ -1,0 +1,53 @@
+{
+  "schema": "svm-replay-session-cpi-test-input/v1",
+  "kind": "new-synthetic-source-built-test-program-not-historical-data",
+  "programSource": "tests/interfaces/integrations/fork/battle/examples/invoke_and_ok.rs",
+  "inputs": [
+    {
+      "path": "tests/interfaces/integrations/fork/battle/examples/invoke_and_ok.rs",
+      "sha256": "a16b643986f081e02f637f4f8239d3610097665d032796be5421ecfcbf2d79c9"
+    },
+    {
+      "path": "tests/interfaces/integrations/fork/battle/Cargo.toml",
+      "sha256": "c0ed2e365610b6f71e2e89e72262ab616af3f2257cb884339c2cd82fff4e5fa5"
+    },
+    {
+      "path": "tests/interfaces/integrations/fork/battle/Cargo.lock",
+      "sha256": "08ea613a5b91fd9ad774072edefbb00a46b55708380f511cfc696395552bfe3a"
+    },
+    {
+      "path": "tests/interfaces/integrations/fork/battle/src/lib.rs",
+      "sha256": "0f35a31977476fee8ab69d579bb827f932eef5c5d0830ac5a95cbb9419e4e32e"
+    },
+    {
+      "path": "tests/interfaces/integrations/fork/battle/src/operations.rs",
+      "sha256": "4ed27ea45e4f5b3cfbd2f3dfc2f134233c05569ec673771f2343fb820303dfd9"
+    },
+    {
+      "path": "tests/interfaces/integrations/fork/battle/src/reader.rs",
+      "sha256": "3f6a2294386cdfbc937c1d06678f565a85e41c24b83268af5a930a2cba68c3d0"
+    }
+  ],
+  "elfSha256": "04ceb738a6612cf37b7eab5874bec69f3dd83c4b1b9e89d25a885d34577d340a",
+  "elfBytes": 26312,
+  "sbpfVersion": 0,
+  "compiler": {
+    "distribution": "anza-xyz/platform-tools v1.54",
+    "rustcVersion": "rustc 1.89.0-dev",
+    "executableSha256": "fa2c61467ffa823dc1a64c28cba22c6ce24b2439ebe28fe546609d7fc638569a"
+  },
+  "target": "sbpf-solana-solana",
+  "build": {
+    "locked": true,
+    "offline": true,
+    "release": true,
+    "example": "invoke_and_ok",
+    "panic": "abort",
+    "lto": "fat",
+    "codegenUnits": 1,
+    "pathRemapping": true
+  },
+  "origin": "https://github.com/anza-xyz/agave/tree/88fb4364021e180e98f8cfddcafe5a33b9c7e2a9/programs/sbf/rust/invoke_and_ok",
+  "adaptation": "Uses the existing battle fixture SDK 2.3 and its standard entrypoint; preserves the actual CPI-and-catch behavior. Not the old private build or historical replay control.",
+  "originalHistoricalInputsChanged": false
+}
