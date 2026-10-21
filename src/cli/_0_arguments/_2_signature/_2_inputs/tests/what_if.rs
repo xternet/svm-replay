@@ -55,10 +55,9 @@ fn overrides_keep_the_old_shape_and_add_eth_call_fields() {
     std::fs::write(&elf, b"\x7fELF-program-bytes").unwrap();
     let text = directory.path().join("notes.txt");
     std::fs::write(&text, b"hello").unwrap();
-    let program = format!(
-        r#"[{{"pubkey":"{ACCOUNT}","program":"@{}"}}]"#,
-        elf.display()
-    );
+    let program = serde_json::json!([{"pubkey": ACCOUNT,
+        "program": format!("@{}", elf.display())}])
+    .to_string();
     let Overrides::State(entries) = overrides(&program).unwrap() else {
         panic!("program is a state override")
     };
@@ -72,18 +71,15 @@ fn overrides_keep_the_old_shape_and_add_eth_call_fields() {
         Some(STANDARD.encode(b"\x7fELF-program-bytes").as_str())
     );
     for bad in [
-        format!(
-            r#"[{{"pubkey":"{ACCOUNT}","program":"@{}"}}]"#,
-            text.display()
-        ),
-        format!(
-            r#"[{{"pubkey":"{ACCOUNT}","program":"{}"}}]"#,
-            elf.display()
-        ),
-        format!(
-            r#"[{{"pubkey":"{ACCOUNT}","program":"@{}","owner":"{ACCOUNT}"}}]"#,
-            elf.display()
-        ),
+        serde_json::json!([{"pubkey": ACCOUNT,
+            "program": format!("@{}", text.display())}])
+        .to_string(),
+        serde_json::json!([{"pubkey": ACCOUNT,
+            "program": elf.display().to_string()}])
+        .to_string(),
+        serde_json::json!([{"pubkey": ACCOUNT,
+            "program": format!("@{}", elf.display()), "owner": ACCOUNT}])
+        .to_string(),
         format!(r#"[{{"pubkey":"{ACCOUNT}","owner":"{ACCOUNT}","color":"red"}}]"#),
         format!(r#"[{{"pubkey":"{ACCOUNT}"}}]"#),
     ] {

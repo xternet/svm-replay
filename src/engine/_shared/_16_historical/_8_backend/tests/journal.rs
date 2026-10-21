@@ -166,6 +166,15 @@ fn a_journal_has_only_one_writer_and_releases_its_lease_on_drop() {
         binding: "db1".into(),
         after: Some("T".into()),
     };
+    let initial = Journal::open(
+        &descriptor,
+        &mut Branches::new(vec![]),
+        &mut Forks::new(),
+        &budget(),
+    )
+    .unwrap();
+    drop(initial);
+    let before = std::fs::read(&path).unwrap();
     let writer = Journal::open(
         &descriptor,
         &mut Branches::new(vec![]),
@@ -173,7 +182,6 @@ fn a_journal_has_only_one_writer_and_releases_its_lease_on_drop() {
         &budget(),
     )
     .unwrap();
-    let before = std::fs::read(&path).unwrap();
     let second = Journal::open(
         &descriptor,
         &mut Branches::new(vec![]),
@@ -184,8 +192,8 @@ fn a_journal_has_only_one_writer_and_releases_its_lease_on_drop() {
         second.err().expect("a competing writer must fail").code,
         "JOURNAL_IN_USE"
     );
-    assert_eq!(std::fs::read(&path).unwrap(), before);
     drop(writer);
+    assert_eq!(std::fs::read(&path).unwrap(), before);
     let resumed = Journal::open(
         &descriptor,
         &mut Branches::new(vec![]),

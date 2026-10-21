@@ -143,6 +143,13 @@ jobs:
           architecture: ${{ matrix.arch }}
       - name: Pinned native Rust
         run: rustup toolchain install 1.94.0 --profile minimal
+      - name: Use Git Bash for the Windows shell-syntax test
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $gitBin = 'C:\Program Files\Git\bin'
+          if (-not (Test-Path "$gitBin\bash.exe")) { throw 'Git Bash is required for completion syntax checks' }
+          Add-Content -Path $env:GITHUB_PATH -Value $gitBin
       - name: Qualification harness checks
         run: python -m unittest discover -s tests/interfaces/packaging/native-ci/scripts -p "test_*.py"
       - name: Process identity harness checks
