@@ -103,7 +103,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch' && inputs.native && !github.event.repository.private
     strategy:
       fail-fast: false
-      max-parallel: 2
+      max-parallel: 6
       matrix:
         include:
           - runner: ubuntu-24.04
@@ -190,7 +190,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch' && inputs.native && !github.event.repository.private
     strategy:
       fail-fast: false
-      max-parallel: 2
+      max-parallel: 6
       matrix:
         include:
           - runner: ubuntu-24.04

@@ -218,7 +218,12 @@ fn ordinary_native_cli_serves_verified_rpc_and_closes_its_worker() {
     assert!(child.0.wait().unwrap().success(), "{final_output}");
     let closed: Value = serde_json::from_str(&final_output).unwrap();
     assert_eq!(closed["outcome"], "COMPLETED");
-    assert_eq!(closed["cleanup"], "OwnerReapedProcessTree");
+    let cleanup = if cfg!(target_os = "macos") {
+        "OwnerTerminatedProcessGroup"
+    } else {
+        "OwnerReapedProcessTree"
+    };
+    assert_eq!(closed["cleanup"], cleanup);
     assert_eq!(
         std::fs::read_dir(root.path().join("scratch"))
             .unwrap()
