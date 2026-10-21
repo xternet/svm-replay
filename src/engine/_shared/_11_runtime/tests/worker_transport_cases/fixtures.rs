@@ -1,5 +1,12 @@
 use super::*;
 
+pub(super) fn fixture_lock() -> std::sync::MutexGuard<'static, ()> {
+    // A concurrent fork can inherit another test's writable script descriptor
+    // until exec, causing ETXTBSY despite the writing thread closing its copy.
+    static FIXTURES: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    FIXTURES.lock().expect("worker fixture lock")
+}
+
 pub(super) fn worker(root: &Path, body: &str) -> WorkerSpec {
     let path = root.join("test-worker");
     // This is an explicit test fixture, never a PATH-shadowed production command.

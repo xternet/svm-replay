@@ -13,7 +13,7 @@ use svm_replay_engine::shared::runtime::{
 };
 #[path = "worker_transport_cases/fixtures.rs"]
 mod fixtures;
-use fixtures::{budget, limits, worker};
+use fixtures::{budget, fixture_lock, limits, worker};
 
 #[path = "worker_transport_cases/live_diagnostics_are_bounded_and.rs"]
 mod live_diagnostics_are_bounded_and;

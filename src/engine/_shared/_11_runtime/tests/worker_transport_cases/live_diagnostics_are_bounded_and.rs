@@ -2,6 +2,7 @@ use super::*;
 
 #[test]
 fn live_diagnostics_are_bounded_and_backpressure_reaps_worker() {
+    let _fixtures = fixture_lock();
     let root = tempfile::tempdir().expect("test root");
     let spec = worker(
         root.path(),
@@ -42,6 +43,7 @@ fn live_diagnostics_are_bounded_and_backpressure_reaps_worker() {
 
 #[test]
 fn real_process_returns_json_with_no_inherited_environment() {
+    let _fixtures = fixture_lock();
     let parent_home = std::env::var_os("HOME");
     let parent_group = unsafe { libc::getpgrp() };
     let mut subreaper_before: libc::c_int = 0;
@@ -87,6 +89,7 @@ fn real_process_returns_json_with_no_inherited_environment() {
 
 #[test]
 fn refuses_bad_pin_before_spawn_and_rechecks_pin_after_execution() {
+    let _fixtures = fixture_lock();
     let root = tempfile::tempdir().expect("test root");
     let mut spec = worker(root.path(), "printf '{}' > \"$2\"");
     spec.sha256 = "0".repeat(64);
@@ -115,12 +118,13 @@ fn refuses_bad_pin_before_spawn_and_rechecks_pin_after_execution() {
             &budget(Duration::from_secs(3)),
         )
         .expect_err("changed executable");
-    assert_eq!(error.code, WorkerErrorCode::Integrity);
+    assert_eq!(error.code, WorkerErrorCode::Integrity, "{error}");
     assert!(error.pid.is_some());
 }
 
 #[test]
 fn limits_combined_diagnostics_output_files_and_input() {
+    let _fixtures = fixture_lock();
     for (body, field, expected) in [
         (
             "printf 123456; printf 789012 >&2; printf '{}' > \"$2\"",

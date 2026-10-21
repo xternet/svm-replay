@@ -2,6 +2,7 @@ use super::*;
 
 #[test]
 fn timeout_and_cancellation_kill_and_wait_immediate_worker() {
+    let _fixtures = fixture_lock();
     for cancel in [false, true] {
         let root = tempfile::tempdir().expect("test root");
         let spec = worker(root.path(), "while :; do :; done");
@@ -49,6 +50,7 @@ fn timeout_and_cancellation_kill_and_wait_immediate_worker() {
 
 #[test]
 fn flooded_diagnostics_cannot_block_cancellation_or_escape_byte_limit() {
+    let _fixtures = fixture_lock();
     let root = tempfile::tempdir().expect("test root");
     let spec = worker(
         root.path(),
@@ -73,6 +75,7 @@ fn flooded_diagnostics_cannot_block_cancellation_or_escape_byte_limit() {
 
 #[test]
 fn budget_is_cumulative_and_precancellation_never_spawns() {
+    let _fixtures = fixture_lock();
     let root = tempfile::tempdir().expect("test root");
     let spec = worker(root.path(), "printf '{}' > \"$2\"");
     let transport = WorkerTransport::new(root.path());
@@ -95,6 +98,7 @@ fn budget_is_cumulative_and_precancellation_never_spawns() {
 
 #[test]
 fn relative_scratch_root_is_resolved_before_child_changes_directory() {
+    let _fixtures = fixture_lock();
     let root = tempfile::tempdir().expect("test root");
     let spec = worker(root.path(), "printf '{}' > \"$2\"");
     let output = WorkerTransport::new(".")
@@ -111,6 +115,7 @@ fn relative_scratch_root_is_resolved_before_child_changes_directory() {
 
 #[test]
 fn auxiliary_checkpoint_files_are_bounded_during_execution() {
+    let _fixtures = fixture_lock();
     let root = tempfile::tempdir().expect("test root");
     let checkpoint = root.path().join("checkpoint.json");
     let spec = worker(
@@ -139,6 +144,7 @@ fn auxiliary_checkpoint_files_are_bounded_during_execution() {
 
 #[test]
 fn rejects_nonregular_results_and_propagates_exit_diagnostics() {
+    let _fixtures = fixture_lock();
     for (body, expected) in [
         ("/usr/bin/ln -s \"$1\" \"$2\"", WorkerErrorCode::Io),
         ("printf not-json > \"$2\"", WorkerErrorCode::InvalidOutput),

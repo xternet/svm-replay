@@ -119,7 +119,7 @@ jobs:
           - runner: windows-11-arm
             arch: arm64
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 120
+    timeout-minutes: ${{ startsWith(matrix.runner, 'windows-') && 240 || 180 }}
     env:
       SVM_REPLAY_VALIDATION_SOURCE: ${{ github.workspace }}
       NATIVE_SCOPE: all
