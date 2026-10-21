@@ -73,6 +73,7 @@ def main():
         if commit != os.environ['GITHUB_SHA']:
             raise RuntimeError('source checkout differs from the dispatched commit')
         run('source-clean', ['git', 'diff', '--exit-code', 'HEAD', '--'], coordinator, 30)
+        run('repository-layout', ['node', '--test', 'tests/interfaces/layout/repository.test.mjs'], coordinator)
         summary['sourceCommit'] = commit
         for name, dest in [('worker-sources.tar.gz', 'workers'),
                            ('coordinator-licenses.tar.gz', 'licenses')]:
@@ -109,7 +110,6 @@ def main():
         compiler = run('compiler', ['rustc', '+1.94.0', '-vV'], ROOT, 30)
         summary['nativeCompilerHost'] = require_native_host(
             compiler.read_text(), sys.platform, platform.machine(), os.environ['RUNNER_ARCH'])
-        run('repository-layout', ['node', '--test', 'tests/interfaces/layout/repository.test.mjs'], coordinator)
         cargo = ['cargo', '+1.94.0', 'build', '--release', '--locked', '--jobs', '4']
         summary['workerBuildProfile'] = 'release'
         run('cli-build', cargo + ['-p', 'svm-replay', '--bin', 'svm-replay'], coordinator)

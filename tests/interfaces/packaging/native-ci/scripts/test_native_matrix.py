@@ -20,6 +20,19 @@ class ReleaseBuildTests(unittest.TestCase):
         self.assertIn('build', self.cargo)
         self.assertEqual(self.cargo.count('--release'), 1)
 
+    def test_layout_is_checked_before_external_sources_are_extracted(self):
+        calls = [node for node in ast.walk(self.tree) if isinstance(node, ast.Call)]
+        layout = [node for node in calls if isinstance(node.func, ast.Name)
+                  and node.func.id == 'run' and node.args
+                  and isinstance(node.args[0], ast.Constant)
+                  and node.args[0].value == 'repository-layout']
+        extraction = [node for node in calls if isinstance(node.func, ast.Attribute)
+                      and node.func.attr == 'extractall']
+        self.assertEqual(len(layout), 1)
+        self.assertTrue(extraction)
+        self.assertLess(layout[0].lineno, min(node.lineno for node in extraction),
+                        'external worker Rust files must not pollute coordinator layout checks')
+
     def test_cli_inherits_release_without_duplicate_flag(self):
         calls = [node for node in ast.walk(self.tree)
                  if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)

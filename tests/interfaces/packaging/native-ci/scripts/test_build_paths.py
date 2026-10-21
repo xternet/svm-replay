@@ -23,7 +23,8 @@ class BuildPathTests(unittest.TestCase):
             root = Path(directory)
             source, work = root / 'checkout', root / 'checkout/work'
             initial = {'CARGO_HOME': str(root / 'cargo home'),
-                       'RUSTUP_HOME': str(root / 'rustup home'), 'KEEP': 'present'}
+                       'RUSTUP_HOME': str(root / 'rustup home'), 'KEEP': 'present',
+                       'HOME': str(root / 'user home'), 'USERPROFILE': str(root / 'user home')}
             with patch.dict(os.environ, initial, clear=True):
                 home = Path.home()
                 env = build_environment(source, work)

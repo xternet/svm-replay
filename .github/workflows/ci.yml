@@ -131,9 +131,9 @@ jobs:
       - name: Pinned native Rust
         run: rustup toolchain install 1.94.0 --profile minimal
       - name: Qualification harness checks
-        run: |
-          python -m unittest discover -s tests/interfaces/packaging/native-ci/scripts -p "test_*.py"
-          node --test tests/interfaces/packaging/native-ci/scripts/process_identity.test.mjs
+        run: python -m unittest discover -s tests/interfaces/packaging/native-ci/scripts -p "test_*.py"
+      - name: Process identity harness checks
+        run: node --test tests/interfaces/packaging/native-ci/scripts/process_identity.test.mjs
       - name: Fetch checksum-pinned public validation inputs
         run: python tests/interfaces/packaging/native-ci/scripts/download_inputs.py
       - name: Actual native execution, capture, debug, session and SDK qualification

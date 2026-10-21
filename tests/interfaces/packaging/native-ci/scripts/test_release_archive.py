@@ -13,7 +13,7 @@ class ArchiveTests(unittest.TestCase):
             (root / name).mkdir()
         (root / "bundle/bundle.json").write_text('{"schema":"unit-archive-payload"}')
         (root / "workers/release.json").write_text('{"schema":"unit-source-payload"}')
-        (root / "licenses/dependency-LICENSE").write_text("test license material\n")
+        (root / "licenses/dependency-LICENSE").write_bytes(b"test license material\n")
         for name in ("LICENSE", "NOTICE"):
             (root / "source" / name).write_text(name + "\n")
         return {"bundle": root / "bundle", "workers": root / "workers", "licenses": root / "licenses",

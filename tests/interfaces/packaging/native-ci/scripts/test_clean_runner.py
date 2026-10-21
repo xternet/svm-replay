@@ -10,6 +10,15 @@ import native_matrix
 
 
 class CleanRunnerTests(unittest.TestCase):
+    def test_python_harness_failure_cannot_be_masked_by_a_later_command(self):
+        root = Path(os.environ["SVM_REPLAY_VALIDATION_SOURCE"])
+        workflow = (root / ".github/workflows/ci.yml").read_text()
+        check = workflow.split("      - name: Qualification harness checks\n", 1)[1]
+        check = check.split("      - name:", 1)[0]
+        self.assertIn("python -m unittest", check)
+        self.assertNotIn("node --test", check)
+        self.assertIn("      - name: Process identity harness checks\n", workflow)
+
     def test_clean_consumer_runs_on_a_separate_runner_after_native_builds(self):
         root = Path(os.environ["SVM_REPLAY_VALIDATION_SOURCE"])
         workflow = (root / ".github/workflows/ci.yml").read_text()
