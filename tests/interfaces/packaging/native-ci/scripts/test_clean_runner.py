@@ -15,6 +15,9 @@ class CleanRunnerTests(unittest.TestCase):
         workflow = (root / ".github/workflows/ci.yml").read_text()
         job = workflow.split("  portable-sdk:\n", 1)[1].split("  offline-checks:\n", 1)[0]
         self.assertIn("SVM_REPLAY_BOUNDARY_BINARY:", job)
+        job_env = job.split("    env:\n", 1)[1].split("    steps:\n", 1)[0]
+        self.assertNotIn("runner.", job_env)
+        self.assertIn("contains(matrix.os, 'windows-')", job_env)
         self.assertIn("cargo +1.94.0 build --locked --jobs 2 -p svm-replay --bin svm-replay", job)
         self.assertLess(job.index("cargo +1.94.0 build"), job.index("      - name: SDK build and tests"))
 
