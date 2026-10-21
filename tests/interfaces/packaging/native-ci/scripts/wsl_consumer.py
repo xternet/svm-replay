@@ -47,7 +47,6 @@ def main() -> None:
         wsl = Path(os.environ["SystemRoot"]) / "System32/wsl.exe"
         distro = [wsl, "--distribution", "Ubuntu-24.04", "--user", "root", "--"]
         command([wsl, "--install", "--distribution", "Ubuntu-24.04", "--no-launch", "--web-download"])
-        command([wsl, "--set-version", "Ubuntu-24.04", "2"])
         kernel = command([*distro, "uname", "-r"], capture=True).stdout.decode("utf-8").strip()
         require_wsl2(kernel)
         (reports / "wsl-kernel.txt").write_text(kernel + "\n")

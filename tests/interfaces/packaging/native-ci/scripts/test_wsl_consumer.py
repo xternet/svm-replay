@@ -1,4 +1,5 @@
 import unittest
+import inspect
 from pathlib import Path
 import wsl_consumer
 
@@ -15,6 +16,11 @@ class WslConsumerTests(unittest.TestCase):
         for kernel in ["6.8.0-generic", "4.4.0-Microsoft", "Windows_NT"]:
             with self.subTest(kernel=kernel), self.assertRaises(ValueError):
                 wsl_consumer.require_wsl2(kernel)
+
+    def test_wsl_is_proven_by_its_kernel_without_redundant_conversion(self):
+        source = inspect.getsource(wsl_consumer.main)
+        self.assertNotIn('"--set-version"', source)
+        self.assertIn("require_wsl2(kernel)", source)
 
     def test_wsl_only_installs_downloaded_bytes_and_reuses_the_actual_consumer(self):
         root = Path(__file__).resolve().parents[5]
