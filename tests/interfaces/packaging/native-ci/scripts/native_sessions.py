@@ -120,7 +120,7 @@ def qualify(inputs: Path, binary: Path, catalog_path: Path, source: Path,
         summary["receiptSha256"] = digest(receipt_path.read_bytes())
         summary["workerSha256"] = worker["sha256"]
         if os.name == "nt":
-            run("windows-session-refusal", [binary, "fork", "--request", descriptor,
+            run("windows-session-refusal", [binary, "session", "--request", descriptor,
                 "--data-dir", reports / "windows-refusal", "--json"],
                 expected_refusal="require Unix")
             summary["transport"] = "UNSUPPORTED_PLATFORM"
@@ -145,7 +145,7 @@ def qualify(inputs: Path, binary: Path, catalog_path: Path, source: Path,
             summary["transport"] = "PASS"
             summary["tests"] = list(EXPECTED_TESTS)
         if sys.platform != "linux":
-            run("parent-lifetime-refusal", [binary, "fork", "--request", descriptor,
+            run("parent-lifetime-refusal", [binary, "session", "--request", descriptor,
                 "--data-dir", reports / "parent-refusal", "--json", "--parent-pid", os.getpid()],
                 expected_refusal="qualified on Linux only")
             summary["sdkParentLifetime"] = "UNSUPPORTED_PLATFORM"
