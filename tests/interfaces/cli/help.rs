@@ -202,7 +202,13 @@ fn documented_bash_completions_are_shell_syntax_not_a_receipt() {
     let script = String::from_utf8(output.stdout).unwrap();
     assert!(script.contains("svm-replay"));
     assert!(!script.contains("\"outcome\""));
-    let mut child = Command::new("bash")
+    let bash = if cfg!(windows) {
+        std::env::var_os("SVM_REPLAY_TEST_BASH")
+            .expect("SVM_REPLAY_TEST_BASH must name Git Bash on Windows")
+    } else {
+        "bash".into()
+    };
+    let mut child = Command::new(bash)
         .arg("-n")
         .stdin(std::process::Stdio::piped())
         .spawn()

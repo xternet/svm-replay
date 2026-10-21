@@ -149,7 +149,7 @@ jobs:
         run: |
           $gitBin = 'C:\Program Files\Git\bin'
           if (-not (Test-Path "$gitBin\bash.exe")) { throw 'Git Bash is required for completion syntax checks' }
-          Add-Content -Path $env:GITHUB_PATH -Value $gitBin
+          Add-Content -Path $env:GITHUB_ENV -Value "SVM_REPLAY_TEST_BASH=$gitBin\bash.exe"
       - name: Qualification harness checks
         run: python -m unittest discover -s tests/interfaces/packaging/native-ci/scripts -p "test_*.py"
       - name: Process identity harness checks
