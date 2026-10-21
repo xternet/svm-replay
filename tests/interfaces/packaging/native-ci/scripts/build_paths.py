@@ -1,6 +1,14 @@
 """Omit local compiler path prefixes from newly qualified native artifacts."""
 import os
+import tempfile
 from pathlib import Path
+
+
+def create_work(source: Path) -> Path:
+    work = Path(tempfile.mkdtemp(prefix='svm-native-')).resolve()
+    if work.is_relative_to(source.resolve()):
+        raise ValueError('Worker extraction must be outside the coordinator Cargo workspace')
+    return work
 
 
 def build_environment(source: Path, work: Path) -> dict:
@@ -11,7 +19,7 @@ def build_environment(source: Path, work: Path) -> dict:
     roots = [(home, '/build-home'),
              (Path(env.get('CARGO_HOME', home / '.cargo')), '/cargo'),
              (Path(env.get('RUSTUP_HOME', home / '.rustup')), '/rustup'),
-             (source, '/svm-replay')]
+             (source, '/svm-replay'), (work, '/svm-native')]
     # Cargo's encoded form preserves spaces in Windows or Unix checkout paths.
     env['CARGO_ENCODED_RUSTFLAGS'] = '\x1f'.join(
         f'--remap-path-prefix={path.resolve()}={public}' for path, public in roots)

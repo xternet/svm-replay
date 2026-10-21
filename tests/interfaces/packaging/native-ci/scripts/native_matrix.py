@@ -10,7 +10,7 @@ from pathlib import Path
 from probe import command, safe_members
 from release_inputs import require_families, release_version, rebind_request
 from native_host import require_native_host, require_binary_arch
-from build_paths import build_environment
+from build_paths import build_environment, create_work
 from cpi_fixture import run_native_session_tests
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -40,14 +40,14 @@ def main():
     native_os = {'linux': 'linux', 'darwin': 'macos', 'win32': 'windows'}[sys.platform]
     native_arch = {'x86_64': 'x86_64', 'aarch64': 'aarch64', 'arm64': 'aarch64',
                    'AMD64': 'x86_64', 'ARM64': 'aarch64'}[platform.machine()]
-    work = ROOT / 'work'
-    work.mkdir(exist_ok=True)
+    work = create_work(coordinator)
     reports = ROOT / 'reports'
     reports.mkdir()
     scope = os.environ['NATIVE_SCOPE']
     if scope != 'all':
         raise RuntimeError('public native qualification requires the complete all scope')
-    summary = {'status': 'IN_PROGRESS', 'scope': scope, 'host': platform.platform(), 'checks': [], 'cases': []}
+    summary = {'status': 'IN_PROGRESS', 'scope': scope, 'host': platform.platform(),
+               'workDirectory': str(work), 'checks': [], 'cases': []}
     env = build_environment(coordinator, work)
 
     def save():

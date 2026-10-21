@@ -1,5 +1,6 @@
 import inspect
 import os
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -31,7 +32,7 @@ class BuildPathTests(unittest.TestCase):
             self.assertEqual(env['KEEP'], 'present')
             self.assertEqual(env['CARGO_TARGET_DIR'], str(work / 'target'))
             flags = env['CARGO_ENCODED_RUSTFLAGS'].split('\x1f')
-            for path in (source, home, root / 'cargo home', root / 'rustup home'):
+            for path in (source, work, home, root / 'cargo home', root / 'rustup home'):
                 self.assertTrue(any(flag.startswith('--remap-path-prefix=' + str(path.resolve()) + '=')
                                     for flag in flags), str(path))
             self.assertTrue(all(flag.startswith('--remap-path-prefix=') for flag in flags))
@@ -48,6 +49,20 @@ class BuildPathTests(unittest.TestCase):
         self.assertIn('env = build_environment(coordinator, work)', inspect.getsource(native_matrix.main))
         import native_sessions
         self.assertIn('env = build_environment(source, target.parent)', inspect.getsource(native_sessions.qualify))
+
+    def test_native_worker_sources_have_no_enclosing_coordinator_workspace(self):
+        from build_paths import create_work
+        source = Path(os.environ['SVM_REPLAY_VALIDATION_SOURCE']).resolve()
+        work = create_work(source)
+        try:
+            self.assertTrue(work.is_dir())
+            self.assertFalse(work.resolve().is_relative_to(source))
+            self.assertIn('work = create_work(coordinator)', inspect.getsource(native_matrix.main))
+            demo = Path(native_matrix.__file__).with_name('demo_qualification.py').read_text()
+            self.assertIn("Path(summary['workDirectory'])", demo)
+            self.assertNotIn("ROOT/'work/", demo)
+        finally:
+            shutil.rmtree(work)
 
 
 if __name__ == '__main__':

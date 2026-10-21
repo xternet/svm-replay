@@ -38,6 +38,9 @@ release = reports / 'installer-inputs'
 release.mkdir()
 source = Path(os.environ['SVM_REPLAY_VALIDATION_SOURCE']).resolve(strict=True)
 checks = []
+work = Path(summary['workDirectory']).resolve(strict=True)
+if work.is_relative_to(source):
+    raise RuntimeError('Native build directory must be outside the coordinator workspace')
 def integrity_run(name, args, cwd, seconds):
     log = reports / (name + '.log')
     item = command(args, cwd, log, seconds, os.environ.copy())
@@ -46,10 +49,10 @@ def integrity_run(name, args, cwd, seconds):
         raise RuntimeError('Post-build source verification failed: ' + name)
     return log
 summary['postBuildSourceIntegrity'] = verify_sources(integrity_run, source,
-    ROOT/'work/workers/worker-sources', summary['sourceCommit'],
+    work/'workers/worker-sources', summary['sourceCommit'],
     summary['workerSourcesSha256'], ROOT/'inputs/worker-sources.tar.gz')
-result = pack(bundle, ROOT/'work/workers/worker-sources',
-              ROOT/'work/licenses/coordinator-license-additions', source,
+result = pack(bundle, work/'workers/worker-sources',
+              work/'licenses/coordinator-license-additions', source,
               release, release_version(source), platform)
 raw = (release/'release.json').read_bytes()
 installs = [native_install(source, release, reports, result['platforms'][0], shell)
