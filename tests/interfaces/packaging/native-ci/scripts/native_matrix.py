@@ -12,6 +12,7 @@ from release_inputs import require_families, release_version, rebind_request
 from native_host import require_native_host, require_binary_arch
 from build_paths import build_environment, create_work
 from cpi_fixture import run_native_session_tests
+from native_catalog import reference_descriptor
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -101,6 +102,7 @@ def main():
         manifest = json.loads((workers / 'release.json').read_bytes())
         require_families(matrix['cases'], [b['family'] for b in manifest['builds']])
         qualified = json.loads((ROOT / 'inputs/qualified-catalog.json').read_bytes())
+        registry = json.loads((coordinator / 'src/engine/_1_resolve_runtime/_2_registry/catalog.json').read_bytes())
         summary['releaseVersion'] = release_version(coordinator)
         summary['workerSourcesSha256'] = digest((ROOT / 'inputs/worker-sources.tar.gz').read_bytes())
         for row in manifest['files']:
@@ -170,8 +172,7 @@ def main():
                 raise RuntimeError('native cache ownership differs')
             shutil.rmtree(native_target)
             reviewed = next(row for row in qualified['workers'] if row['family'] == family)
-            descriptor = dict(reviewed, file=destination.name, sha256=worker_pin, buildHash=build_pin,
-                              sourceSha256=build['portableInputSha256'])
+            descriptor = reference_descriptor(build, reviewed, registry, destination.name, worker_pin, build_pin)
             catalog['workers'].append(descriptor)
             catalog_path = bundle / 'catalog.json'
             catalog_path.write_bytes(encoded(catalog))

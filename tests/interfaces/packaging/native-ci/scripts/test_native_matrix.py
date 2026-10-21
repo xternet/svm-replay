@@ -58,14 +58,27 @@ class ReleaseBuildTests(unittest.TestCase):
                 self.assertNotIn('target/debug/', source)
                 self.assertIn('target/release/', source)
 
-    def test_rebuilt_reference_source_identity_is_not_the_retained_binary_identity(self):
+    def test_rebuilt_catalog_binds_to_the_reviewed_runtime_profile(self):
         assignments = [node.value for node in ast.walk(self.tree)
                        if isinstance(node, ast.Assign) and any(
                            isinstance(target, ast.Name) and target.id == 'descriptor'
                            for target in node.targets)]
         self.assertEqual(len(assignments), 1)
-        keywords = {item.arg: ast.unparse(item.value) for item in assignments[0].keywords}
-        self.assertEqual(keywords.get('sourceSha256'), "build['portableInputSha256']")
+        reviewed_source = digest(b'original reviewed VM source inventory')
+        reviewed = {'family': 'v2-2', 'executorSourceId': 'reviewed-executor',
+                    'sourceSha256': reviewed_source}
+        build = {'family': reviewed['family'], 'inputFiles': [],
+                 'retainedSourceSha256': reviewed_source,
+                 'portableInputSha256': digest(encoded([]) + b'\n')}
+        registry = {'executors': [{'id': reviewed['executorSourceId'],
+                    'packageName': reviewed['family'], 'reviewedSourceSha256': reviewed_source}]}
+        expression = ast.Expression(assignments[0])
+        descriptor = eval(compile(expression, '<native catalog producer>', 'eval'),
+                          vars(native_matrix), dict(build=build, reviewed=reviewed,
+                          registry=registry, destination=Path('worker'),
+                          worker_pin=digest(b'new native binary'), build_pin=digest(b'new build')))
+        self.assertEqual(descriptor['sourceSha256'], registry['executors'][0]['reviewedSourceSha256'])
+        self.assertNotEqual(descriptor['sourceSha256'], build['portableInputSha256'])
 
 
 class NativeOutputTests(unittest.TestCase):

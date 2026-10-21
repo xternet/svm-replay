@@ -20,9 +20,9 @@ class CleanRunnerTests(unittest.TestCase):
             subprocess.run(["git", "init", "--quiet", directory], check=True)
             Path(directory, ".gitignore").write_bytes((root / ".gitignore").read_bytes())
             ignored = subprocess.check_output(["git", "-c", "core.excludesFile=/dev/null",
-                "check-ignore", "--no-index", "--stdin"], cwd=directory,
-                input="\n".join([*generated, source]) + "\n", text=True)
-            self.assertEqual(ignored.splitlines(), generated)
+                "check-ignore", "--no-index", "-z", "--stdin"], cwd=directory,
+                input=b"\0".join(path.encode() for path in [*generated, source]) + b"\0")
+            self.assertEqual(ignored.split(b"\0"), [*(path.encode() for path in generated), b""])
 
     def test_offline_package_checks_run_after_sdk_dependencies_are_installed(self):
         root = Path(os.environ["SVM_REPLAY_VALIDATION_SOURCE"])

@@ -69,12 +69,22 @@ fn heartbeat_runs_during_blocking_wait_and_stops_on_every_terminal_path() {
         "MISMATCH",
     ] {
         let (events, sink) = recorder();
+        let (sender, receiver) = std::sync::mpsc::channel();
+        let observed_sink = Arc::new(move |event: ProgressEvent| {
+            let heartbeat = event.kind == Kind::Heartbeat;
+            sink(event);
+            if heartbeat {
+                sender.send(()).unwrap();
+            }
+        });
         let job = ProgressJob::start_with_interval(
             Phase::FetchingHistoricalAccounts,
-            sink,
+            observed_sink,
             Duration::from_millis(5),
         );
-        std::thread::sleep(Duration::from_millis(25));
+        receiver
+            .recv_timeout(Duration::from_secs(2))
+            .expect("heartbeat during the blocking wait");
         job.finish(outcome);
         let before = events.lock().unwrap().len();
         std::thread::sleep(Duration::from_millis(15));
