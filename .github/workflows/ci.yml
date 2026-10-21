@@ -21,11 +21,19 @@ jobs:
         os: [ubuntu-24.04, macos-14, windows-2022]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
+    env:
+      SVM_REPLAY_BOUNDARY_BINARY: ${{ github.workspace }}/target/debug/svm-replay${{ runner.os == 'Windows' && '.exe' || '' }}
+      CARGO_PROFILE_DEV_DEBUG: '0'
+      CARGO_INCREMENTAL: '0'
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '22.22.0'
+      - name: Pinned Rust for native boundary unit tests
+        run: rustup toolchain install 1.94.0 --profile minimal
+      - name: Build native boundary CLI
+        run: cargo +1.94.0 build --locked --jobs 2 -p svm-replay --bin svm-replay
       - name: Repository layout
         run: node --test tests/interfaces/layout/repository.test.mjs
       - name: Native installer checks (offline)

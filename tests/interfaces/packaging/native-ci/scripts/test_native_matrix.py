@@ -33,6 +33,12 @@ class ReleaseBuildTests(unittest.TestCase):
         self.assertLess(layout[0].lineno, min(node.lineno for node in extraction),
                         'external worker Rust files must not pollute coordinator layout checks')
 
+    def test_sdk_native_projection_uses_the_cli_built_by_this_job(self):
+        source = inspect.getsource(native_matrix.main)
+        selected = "env['SVM_REPLAY_BOUNDARY_BINARY'] = str(binary)"
+        self.assertIn(selected, source)
+        self.assertLess(source.index(selected), source.index("run('sdk-unit-tests'"))
+
     def test_cli_inherits_release_without_duplicate_flag(self):
         calls = [node for node in ast.walk(self.tree)
                  if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)

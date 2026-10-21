@@ -116,6 +116,7 @@ def main():
         suffix = '.exe' if os.name == 'nt' else ''
         binary = work / ('target/release/svm-replay' + suffix)
         require_binary_arch(binary, native_os, native_arch)
+        env['SVM_REPLAY_BOUNDARY_BINARY'] = str(binary)
         summary['binarySha256'] = digest(binary.read_bytes())
         run('launch', [str(binary), '--help'], ROOT, 30)
         run('workspace-tests', ['cargo', '+1.94.0', 'test', '--no-fail-fast', '--locked', '--jobs', '4',

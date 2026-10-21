@@ -10,6 +10,14 @@ import native_matrix
 
 
 class CleanRunnerTests(unittest.TestCase):
+    def test_ordinary_sdk_job_builds_its_native_boundary_prerequisite(self):
+        root = Path(os.environ["SVM_REPLAY_VALIDATION_SOURCE"])
+        workflow = (root / ".github/workflows/ci.yml").read_text()
+        job = workflow.split("  portable-sdk:\n", 1)[1].split("  offline-checks:\n", 1)[0]
+        self.assertIn("SVM_REPLAY_BOUNDARY_BINARY:", job)
+        self.assertIn("cargo +1.94.0 build --locked --jobs 2 -p svm-replay --bin svm-replay", job)
+        self.assertLess(job.index("cargo +1.94.0 build"), job.index("      - name: SDK build and tests"))
+
     def test_python_harness_failure_cannot_be_masked_by_a_later_command(self):
         root = Path(os.environ["SVM_REPLAY_VALIDATION_SOURCE"])
         workflow = (root / ".github/workflows/ci.yml").read_text()
