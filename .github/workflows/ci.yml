@@ -81,7 +81,7 @@ jobs:
           npm test
           npm pack
       - name: Package and contributor safeguards
-        run: node --test tests/interfaces/packaging/metadata.test.mjs tests/interfaces/packaging/contribution.test.mjs tests/interfaces/packaging/integration-docs.test.mjs
+        run: node --test tests/interfaces/packaging/*.test.mjs tests/interfaces/packaging/native-ci/scripts/process_identity.test.mjs
       - name: Consumer examples
         run: |
           npm --prefix examples ci --ignore-scripts
@@ -92,7 +92,7 @@ jobs:
       - name: Cross-component tests
         run: |
           npm --prefix tests ci --ignore-scripts
-          bun test ./tests
+          bun test ./tests/harness ./tests/historical ./tests/interfaces/layout/layout.test.ts
 
   native-candidate:
     if: github.event_name == 'workflow_dispatch' && inputs.native && !github.event.repository.private

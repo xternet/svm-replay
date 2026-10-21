@@ -4,18 +4,20 @@ Run from the repository root:
 
 ```sh
 node --test tests/interfaces/layout/repository.test.mjs
-node --test tests/interfaces/packaging/*.test.mjs
+node --test tests/interfaces/packaging/*.test.mjs tests/interfaces/packaging/native-ci/scripts/process_identity.test.mjs
 cargo test --workspace --locked --offline
 cargo fmt --all --check
 npm --prefix src/bindings/typescript test
 npm --prefix examples test
 npm --prefix tests ci --ignore-scripts
-bun test ./tests
+bun test ./tests/harness ./tests/historical ./tests/interfaces/layout/layout.test.ts
 ```
 
 Install dependencies first on a fresh checkout. These ordinary checks do not
 contact Alchemy. Lossless JSON is a declared test dependency, not imported from
 a private prototype installation.
+Node owns the `.mjs` suites, including their platform/input opt-in guards; Bun
+runs the TypeScript suites only.
 
 | Directory | Checks |
 | --- | --- |

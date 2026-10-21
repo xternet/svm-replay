@@ -7,7 +7,7 @@ fn documented_trace_configuration_matches_public_contract() {
         .split("## Minimal capture configuration")
         .nth(1)
         .unwrap()
-        .split("```json\n")
+        .split("```json")
         .nth(1)
         .unwrap()
         .split("```")
@@ -20,6 +20,7 @@ fn documented_trace_configuration_matches_public_contract() {
 
 #[test]
 fn terminal_modes_preserve_script_output() {
+    let _serial = PROCESS_FIXTURE.lock().expect("process fixture lock");
     let output = Command::new(env!("CARGO_BIN_EXE_svm-replay"))
         .args(["demo", "--json", "--example", "default"])
         .output()
@@ -49,6 +50,7 @@ fn terminal_modes_preserve_script_output() {
 
 #[test]
 fn demo_without_installed_fixture_fails_clearly_without_network() {
+    let _serial = PROCESS_FIXTURE.lock().expect("process fixture lock");
     let (ok, response) = cli(&["demo"]);
     assert!(!ok);
     assert_eq!(response["error"]["code"], "DEMO_NOT_INSTALLED");
@@ -56,6 +58,7 @@ fn demo_without_installed_fixture_fails_clearly_without_network() {
 
 #[test]
 fn demo_distinguishes_absent_from_invalid_installation() {
+    let _serial = PROCESS_FIXTURE.lock().expect("process fixture lock");
     let dir = tempfile::tempdir().unwrap();
     let bin = dir.path().join("bin");
     fs::create_dir(&bin).unwrap();
@@ -81,6 +84,7 @@ fn demo_distinguishes_absent_from_invalid_installation() {
 
 #[test]
 fn demo_rejects_wrong_bundle_pin_before_execution() {
+    let _serial = PROCESS_FIXTURE.lock().expect("process fixture lock");
     let dir = tempfile::tempdir().unwrap();
     let bundle = dir.path().join("bundle.json");
     fs::write(&bundle, b"{}").unwrap();
@@ -98,6 +102,7 @@ fn demo_rejects_wrong_bundle_pin_before_execution() {
 
 #[test]
 fn validate_rejects_invalid_request_without_creating_data() {
+    let _serial = PROCESS_FIXTURE.lock().expect("process fixture lock");
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("request.json");
     fs::write(&path, b"{\"schema\":\"unknown\"}").unwrap();
@@ -110,6 +115,7 @@ fn validate_rejects_invalid_request_without_creating_data() {
 #[test]
 #[cfg(target_os = "linux")]
 fn bundle_installs_offline_and_rejects_tampering_and_overwrite() {
+    let _serial = PROCESS_FIXTURE.lock().expect("process fixture lock");
     let dir = tempfile::tempdir().unwrap();
     let pin = catalog(dir.path());
     let input = dir.path().join("catalog.json");

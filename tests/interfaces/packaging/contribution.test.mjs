@@ -40,10 +40,8 @@ test("local Rust pin matches CI and CI runs package/contribution checks after Ru
     assert.ok(setup >= 0, "CI must install the pinned toolchain");
     assert.ok(workflow.includes(`cargo +${pin} fmt --all --check`));
     assert.ok(workflow.includes(`cargo +${pin} test --workspace --locked`));
-    for (const file of ["metadata", "contribution"]) {
-        assert.ok(workflow.indexOf(`tests/interfaces/packaging/${file}.test.mjs`) > setup,
-            `${file} checks must run after Rust setup`);
-    }
+    assert.ok(workflow.indexOf("node --test tests/interfaces/packaging/*.test.mjs") > setup,
+        "package checks must run after Rust setup");
 });
 
 test("contributor templates point to checks and private security reporting", () => {
@@ -71,11 +69,15 @@ test("SDK PR checks cover Linux, macOS and Windows without private inputs", () =
     }
 });
 
-test("Bun runs cross-component tests by directory while Node owns the SDK tests", () => {
+test("Bun runs TypeScript checks while Node owns Node suites and their opt-in guards", () => {
     const workflow = read(".github/workflows/ci.yml");
-    assert.match(workflow, /bun test \.\/tests\b/,
-        "Bun treats bare tests as a repository-wide path filter, including Node-only SDK tests");
-    assert.match(read("tests/README.md"), /bun test \.\/tests\b/);
+    const bun = "bun test ./tests/harness ./tests/historical ./tests/interfaces/layout/layout.test.ts";
+    assert.ok(workflow.includes(bun));
+    assert.ok(read("tests/README.md").includes(bun));
+    assert.doesNotMatch(workflow, /bun test \.\/tests\s*$/m,
+        "Bun must not reinterpret node:test skip options in Node installer suites");
+    assert.ok(workflow.includes("node --test tests/interfaces/packaging/*.test.mjs"));
+    assert.ok(workflow.includes("tests/interfaces/packaging/native-ci/scripts/process_identity.test.mjs"));
     assert.ok(hasNodeSdkTestStep(workflow),
         "the entire Node SDK suite must remain a separate Node job");
 });

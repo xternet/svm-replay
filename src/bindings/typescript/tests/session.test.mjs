@@ -1,5 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
 import {sessionArguments} from '../dist/session-options.js';
 import {Replay} from '../dist/index.js';
 
@@ -25,9 +27,10 @@ test('explicit credential references and key files remain references',()=>{
         assert.equal(command.args[command.args.indexOf('--key')+1],'env:SVM_TEST_KEY');
         assert.equal(command.env.SVM_TEST_KEY,'synthetic-reference-value');
         assert.equal(command.args.includes('synthetic-reference-value'),false);
-        const file=sessionArguments({after:'123',keyFile:'/tmp/provider-key'},[],undefined);
+        const keyFile=join(tmpdir(),'svm-replay-provider-key');
+        const file=sessionArguments({after:'123',keyFile},[],undefined);
         assert.equal(file.args.includes('--key'),false);
-        assert.equal(file.args[file.args.indexOf('--key-file')+1],'/tmp/provider-key');
+        assert.equal(file.args[file.args.indexOf('--key-file')+1],keyFile);
         assert.throws(()=>sessionArguments({after:'123',key:'env:bad-name'},[],undefined),e=>e.code==='INVALID_REQUEST');
     } finally {delete process.env.SVM_TEST_KEY;}
 });

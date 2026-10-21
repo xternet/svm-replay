@@ -3,6 +3,8 @@ use serde_json::{json, Value};
 use std::os::unix::fs::PermissionsExt;
 use std::{fs, path::Path, process::Command};
 use svm_replay_protocol::Digest;
+// A concurrent fork can inherit another test's open executable-copy descriptor.
+static PROCESS_FIXTURE: std::sync::Mutex<()> = std::sync::Mutex::new(());
 #[path = "product_cases/fixtures.rs"]
 mod fixtures;
 #[cfg(target_os = "linux")]

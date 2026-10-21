@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "layout": "node --test interfaces/layout/repository.test.mjs",
-    "test": "bun test ."
+    "test": "bun test ./harness ./historical ./interfaces/layout/layout.test.ts"
   },
   "devDependencies": { "lossless-json": "4.3.1" }
 }

@@ -3,6 +3,7 @@ use super::*;
 #[test]
 #[cfg(target_os = "linux")]
 fn bundle_rejects_bad_paths_duplicates_pins_and_uninstalled_families() {
+    let _serial = PROCESS_FIXTURE.lock().expect("process fixture lock");
     let dir = tempfile::tempdir().unwrap();
     let pin = catalog(dir.path());
     let input = dir.path().join("catalog.json");
@@ -92,6 +93,7 @@ fn bundle_rejects_bad_paths_duplicates_pins_and_uninstalled_families() {
 
 #[test]
 fn request_builder_requires_reviewed_evidence_and_never_overwrites() {
+    let _serial = PROCESS_FIXTURE.lock().expect("process fixture lock");
     let dir = tempfile::tempdir().unwrap();
     let feature = "11111111111111111111111111111111";
     let profile = Digest::of(b"CLI builder synthetic profile");

@@ -4,7 +4,7 @@ use super::*;
 fn documented_collection_configuration_is_valid() {
     let guide = include_str!("../../../../../../docs/tracing.md");
     let sample = guide
-        .split("```json\n")
+        .split("```json")
         .nth(1)
         .unwrap()
         .split("```")
