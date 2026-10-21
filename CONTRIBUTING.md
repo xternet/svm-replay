@@ -1,7 +1,7 @@
 # Contributing
 
 Read [architecture](docs/architecture.md), [tests](tests/README.md) and
-[AGENTS.md](AGENTS.md). Version 0.1.0 is an unpublished release candidate.
+[AGENTS.md](AGENTS.md). Version 0.2.0 is an unpublished release candidate.
 
 - Keep entry points readable. Component logic/tests belong with their owner;
   src/engine/_shared/ is only for services shared by replay stages.

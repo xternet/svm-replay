@@ -2,9 +2,14 @@ use super::*;
 
 pub fn render(value: &Value, elapsed: Duration) -> std::io::Result<()> {
     let mut out = std::io::stdout().lock();
+    if value["schema"] == "svm-historical-rpc/v1" && value["kind"] == "interrupted" {
+        return writeln!(out, "\nHistorical fork stopped (interrupted).\n");
+    }
     let passed = value["outcome"] == "COMPLETED";
     let color = std::io::stdout().is_terminal() && std::env::var_os("NO_COLOR").is_none();
-    let label = if value["matched"] == true {
+    let label = if value["schema"] == "svm-historical-rpc/v1" && value["kind"] == "closed" {
+        "Historical fork stopped"
+    } else if value["matched"] == true {
         "Replay matches the expected historical result"
     } else if passed {
         "Completed"
@@ -27,6 +32,9 @@ pub fn render(value: &Value, elapsed: Duration) -> std::io::Result<()> {
         if passed { "✓" } else { "✗" },
         style::stdout(&format!("({:.1}s)", elapsed.as_secs_f64()))
     )?;
+    if let Some(warning) = value.pointer("/runtimeSelection/warning") {
+        writeln!(out, "  Warning: {}", display(warning))?;
+    }
     for (label, item) in [
         ("Outcome", &value["outcome"]),
         ("Category", &value["incomplete"]["category"]),
@@ -103,51 +111,73 @@ pub(in super::super) fn format_result(result: &Value) -> String {
         "requestedOverrides",
     ] {
         let tx = &result[name];
-        if tx.is_null() {
-            continue;
+        if !tx.is_null() {
+            transaction(&mut lines, &format!("Transaction ({name})"), tx);
         }
-        lines.push(format!("\nTransaction ({name})"));
-        for (field, label) in [("status", "Status"), ("computeUnits", "Compute units")] {
-            if let Some(value) = tx.get(field) {
-                lines.push(format!("  {label}: {}", display(value)));
-            }
-        }
-        if let Some(logs) = tx["logs"].as_array().filter(|logs| !logs.is_empty()) {
-            lines.push(format!("\nLogs ({}, showing up to 20)", logs.len()));
-            for log in logs.iter().take(20) {
-                lines.push(format!("  {}", display(log)));
-            }
-        }
-        if let Some(accounts) = tx["accountTransitions"].as_array() {
-            let changed: Vec<_> = accounts
-                .iter()
-                .filter(|a| a["before"] != a["after"])
-                .collect();
-            lines.push(format!(
-                "\nAccount changes ({}, showing up to 3)",
-                changed.len()
-            ));
-            for account in changed.iter().take(3) {
-                lines.push(format!(
-                    "\n  {}\n    Lamports: {} → {}",
-                    display(&account["pubkey"]),
-                    display(&account["before"]["lamports"]),
-                    display(&account["after"]["lamports"])
-                ));
-                if !account["before"]["tokenAmount"].is_null()
-                    || !account["after"]["tokenAmount"].is_null()
-                {
-                    lines.push(format!(
-                        "    Tokens (raw): {} → {}",
-                        display(&account["before"]["tokenAmount"]),
-                        display(&account["after"]["tokenAmount"])
-                    ));
-                }
-            }
-            if changed.len() > 3 {
-                lines.push("\n  Full changes are in the receipt's result artifact.".into());
-            }
+    }
+    if let Some(what_if) = result.get("whatIf").filter(|value| !value.is_null()) {
+        let runs = what_if["transactions"]
+            .as_array()
+            .map_or(&[][..], Vec::as_slice);
+        let place = if what_if["mode"] == "after" {
+            "after the original"
+        } else {
+            "instead of the original"
+        };
+        let overridden = what_if["stateOverrides"].as_array().map_or(0, Vec::len);
+        lines.push(format!(
+            "\nBundle: {} transaction(s) {place}; {overridden} account(s) overridden first",
+            runs.len()
+        ));
+        for (position, tx) in runs.iter().enumerate() {
+            let title = format!("Transaction (bundle {} of {})", position + 1, runs.len());
+            transaction(&mut lines, &title, tx);
         }
     }
     lines.join("\n")
+}
+
+fn transaction(lines: &mut Vec<String>, title: &str, tx: &Value) {
+    lines.push(format!("\n{title}"));
+    for (field, label) in [("status", "Status"), ("computeUnits", "Compute units")] {
+        if let Some(value) = tx.get(field) {
+            lines.push(format!("  {label}: {}", display(value)));
+        }
+    }
+    if let Some(logs) = tx["logs"].as_array().filter(|logs| !logs.is_empty()) {
+        lines.push(format!("\nLogs ({}, showing up to 20)", logs.len()));
+        for log in logs.iter().take(20) {
+            lines.push(format!("  {}", display(log)));
+        }
+    }
+    if let Some(accounts) = tx["accountTransitions"].as_array() {
+        let changed: Vec<_> = accounts
+            .iter()
+            .filter(|a| a["before"] != a["after"])
+            .collect();
+        lines.push(format!(
+            "\nAccount changes ({}, showing up to 3)",
+            changed.len()
+        ));
+        for account in changed.iter().take(3) {
+            lines.push(format!(
+                "\n  {}\n    Lamports: {} → {}",
+                display(&account["pubkey"]),
+                display(&account["before"]["lamports"]),
+                display(&account["after"]["lamports"])
+            ));
+            if !account["before"]["tokenAmount"].is_null()
+                || !account["after"]["tokenAmount"].is_null()
+            {
+                lines.push(format!(
+                    "    Tokens (raw): {} → {}",
+                    display(&account["before"]["tokenAmount"]),
+                    display(&account["after"]["tokenAmount"])
+                ));
+            }
+        }
+        if changed.len() > 3 {
+            lines.push("\n  Full changes are in the receipt's result artifact.".into());
+        }
+    }
 }

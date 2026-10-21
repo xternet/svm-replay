@@ -1,6 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, writeFile, rm } from "node:fs/promises";
+import { mkdtemp, writeFile, rm, symlink } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createHash } from "node:crypto";
@@ -25,11 +27,23 @@ test("release pin is mandatory and platform metadata is confined", async () => {
     const dir = await mkdtemp(join(tmpdir(), "svm-install-test-"));
     try {
         const path = join(dir, "release.json");
-        const raw = JSON.stringify({version:"0.1.0", platforms:[{platform:"linux-x86_64",file:"native.tar.gz",sha256:"1".repeat(64),bundleSha256:"2".repeat(64)}]});
+        const raw = JSON.stringify({version:"0.2.0", platforms:[{platform:"linux-x86_64",file:"native.tar.gz",sha256:"1".repeat(64),bundleSha256:"2".repeat(64)}]});
         await writeFile(path, raw);
         await assert.rejects(inspectRelease(path, "0".repeat(64), "linux-x86_64"), /integrity/);
         const pin = createHash("sha256").update(raw).digest("hex");
         assert.equal((await inspectRelease(path, pin, "linux-x86_64")).file, "native.tar.gz");
         await assert.rejects(inspectRelease(path, pin, "windows-x86_64"), /not included/);
     } finally { await rm(dir, {recursive:true}); }
+});
+
+// npm installs bin entries as symlinks on Linux and macOS; Windows uses .cmd shims that call the real file.
+test("the installer runs when started through npm's bin symlink", {skip: process.platform === "win32"}, async () => {
+    const dir = await mkdtemp(join(tmpdir(), "svm-install-bin-"));
+    try {
+        const link = join(dir, "svm-replay-install");
+        await symlink(fileURLToPath(new URL("../install.mjs", import.meta.url)), link);
+        const result = spawnSync(process.execPath, [link, "--help"], {encoding: "utf8"});
+        assert.equal(result.status, 0);
+        assert.match(result.stdout, /svm-replay-install --release/);
+    } finally { await rm(dir, {recursive: true}); }
 });

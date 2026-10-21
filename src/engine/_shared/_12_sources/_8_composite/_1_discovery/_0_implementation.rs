@@ -86,4 +86,24 @@ impl CompositeSource {
             .details(json!({"slot":target,"observations":observations}))),
         }
     }
+
+    /// A finalized archive read from the first source that reads an archive; no such source
+    /// is an unavailable archive, never an empty answer.
+    pub fn archive(&mut self, query: &Value) -> Result<Value> {
+        for (source, identity) in &self.sources {
+            require(
+                source.identity() == *identity,
+                "SOURCE_INTEGRITY",
+                "source identity mutated",
+            )?;
+            if let Some(result) = source.archive(query)? {
+                return Ok(result);
+            }
+        }
+        Err(SourceError::new(
+            "SOURCE_UNAVAILABLE",
+            "no configured source reads the finalized archive",
+        )
+        .details(json!({"query":query})))
+    }
 }

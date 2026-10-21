@@ -74,6 +74,20 @@ impl HttpsTransport {
             "SOURCE_CONFIGURATION",
             "invalid historical API credential shape",
         )?;
+        Self::configured(
+            format!("https://solana-mainnet.g.alchemy.com/v2/{credential}"),
+            credential,
+        )
+    }
+
+    pub(in super::super) fn from_provider(
+        provider: crate::shared::historical::ResolvedProvider,
+    ) -> Result<Self> {
+        let (endpoint, credential) = provider.transport_parts();
+        Self::configured(endpoint, credential)
+    }
+
+    fn configured(endpoint: String, credential: String) -> Result<Self> {
         let client = reqwest::blocking::Client::builder()
             .https_only(true)
             .redirect(reqwest::redirect::Policy::none())
@@ -85,7 +99,7 @@ impl HttpsTransport {
             })?;
         Ok(Self {
             client,
-            endpoint: format!("https://solana-mainnet.g.alchemy.com/v2/{credential}"),
+            endpoint,
             credential,
         })
     }

@@ -64,3 +64,36 @@ fn historical_22_family_still_requires_exact_binding() {
         "UNSUPPORTED_RUNTIME"
     );
 }
+
+#[test]
+fn extra_account_reads_are_canonical_unique_and_not_overrides() {
+    let mut value = request();
+    value["extraAccounts"] = json!(["SysvarRent111111111111111111111111111111111"]);
+    let parsed = HistoricalRequest::parse(&serde_json::to_vec(&value).unwrap()).unwrap();
+    assert!(parsed.what_if.is_none());
+    assert!(parsed.requested_account_overrides.is_none());
+    for keys in [
+        json!(["invalid"]),
+        json!([
+            "11111111111111111111111111111111",
+            "11111111111111111111111111111111"
+        ]),
+    ] {
+        value["extraAccounts"] = keys;
+        assert!(HistoricalRequest::parse(&serde_json::to_vec(&value).unwrap()).is_err());
+    }
+}
+
+#[test]
+fn after_slot_is_a_pre_transaction_zero_boundary() {
+    let mut value = request();
+    value["afterSlot"] = json!(19);
+    assert!(HistoricalRequest::parse(&serde_json::to_vec(&value).unwrap()).is_ok());
+    for after in [json!(20), json!(21), json!(-1), json!(9007199254740992u64)] {
+        value["afterSlot"] = after;
+        assert!(HistoricalRequest::parse(&serde_json::to_vec(&value).unwrap()).is_err());
+    }
+    value["afterSlot"] = json!(19);
+    value["candidate"]["transactionIndex"] = json!(1);
+    assert!(HistoricalRequest::parse(&serde_json::to_vec(&value).unwrap()).is_err());
+}

@@ -87,6 +87,7 @@ impl AlchemySource {
         ) {
             Ok(response) => response,
             Err(failure) => {
+                crate::shared::progress::download_unknown();
                 // A failed transport cannot promise how many partial bytes arrived.
                 // Retain the full reservation so failures cannot reset a byte budget.
                 if self.budget.is_none() {
@@ -112,6 +113,7 @@ impl AlchemySource {
                 .details(json!({"chargedBytes":if self.budget.is_some(){reserved}else{max},"downloadedBytesKnown":false})));
             }
         };
+        crate::shared::progress::downloaded(response.body.len() as u64);
         state.counters.downloaded_bytes = state
             .counters
             .downloaded_bytes

@@ -1,7 +1,7 @@
 use super::*;
 
 pub(super) fn show_help(subcommand: Option<&str>) -> Result<Value, Error> {
-    let mut command = Args::command();
+    let mut command = super::help::command();
     let command = match subcommand {
         Some(name) => command
             .find_subcommand_mut(name)

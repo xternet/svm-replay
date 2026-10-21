@@ -95,3 +95,71 @@ pub(in super::super) struct Lineage<'a> {
     pub(in super::super) blockhash: &'a str,
     pub(in super::super) previous_blockhash: &'a str,
 }
+
+/// Shared metadata witnesses; never executes any archived transaction.
+pub(in super::super) fn derive_context(
+    block: &Value,
+    target_slot: u64,
+    source_hash: &str,
+    required: Value,
+) -> Result<Value> {
+    digest(source_hash)?;
+    integer(&json!(target_slot))?;
+    let parent = integer(field(block, "parentSlot")?)?;
+    let blockhash = pubkey(field(block, "blockhash")?)?;
+    let execution = pubkey(field(block, "previousBlockhash")?)?;
+    check(parent < target_slot, "parent must precede target")?;
+    let transactions = array(field(block, "transactions")?)?;
+    let mut witnesses = Vec::new();
+    let mut per_signature = None;
+    for (index, transaction) in transactions.iter().enumerate() {
+        let meta = field(transaction, "meta")?;
+        if !field(meta, "err")?.is_null() {
+            continue;
+        }
+        let instructions = resolve(transaction)?;
+        if instructions.len() != 1
+            || instructions[0].program != "Vote111111111111111111111111111111111111111"
+        {
+            continue;
+        }
+        let header = field(
+            field(field(transaction, "transaction")?, "message")?,
+            "header",
+        )?;
+        let signatures = integer(field(header, "numRequiredSignatures")?)?;
+        let fee = integer(field(meta, "fee")?)?;
+        check(
+            signatures > 0 && fee > 0 && fee % signatures == 0,
+            &format!("vote fee witness {index} malformed"),
+        )?;
+        let rate = fee / signatures;
+        if let Some(previous) = per_signature {
+            check(previous == rate, "vote fee witnesses disagree")?;
+        } else {
+            per_signature = Some(rate);
+        }
+        witnesses.push(FeeWitness {
+            transaction_index: index,
+            fee,
+            signatures,
+        });
+    }
+    let rate = per_signature.ok_or_else(|| fail("vote fee witnesses missing"))?;
+    let lineage = Lineage {
+        source_hash,
+        target_slot,
+        parent_slot: parent,
+        blockhash,
+        previous_blockhash: execution,
+    };
+    let lineage_hash = hash(serde_json::to_vec(&lineage).map_err(|e| fail(e.to_string()))?);
+    let witness_hash = hash(serde_json::to_vec(&witnesses).map_err(|e| fail(e.to_string()))?);
+    let witness_indices: Vec<_> = witnesses.iter().map(|w| w.transaction_index).collect();
+    let indices_hash = hash(serde_json::to_vec(&witness_indices).map_err(|e| fail(e.to_string()))?);
+    let mut result = json!({"targetSlot":target_slot,"parentSlot":parent,"executionBlockhash":execution,"lamportsPerSignature":rate,
+        "sourceKind":"canonical-block-lineage-and-vote-fees-v1","blockSourceHash":source_hash,"blockLineageHash":lineage_hash,
+        "feeWitnessHash":witness_hash,"feeWitnessCount":witnesses.len(),"feeWitnessIndicesHash":indices_hash,"requiredRuntimeSysvars":required});
+    result["derivationHash"] = json!(historical_bank_context_hash(&result)?);
+    Ok(result)
+}

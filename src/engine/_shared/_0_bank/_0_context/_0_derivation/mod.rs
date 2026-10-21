@@ -2,4 +2,4 @@ use super::*;
 
 mod _0_implementation;
 
-pub(super) use _0_implementation::{resolve, FeeWitness, Lineage, RECENT};
+pub(super) use _0_implementation::{derive_context, resolve, Lineage, RECENT};

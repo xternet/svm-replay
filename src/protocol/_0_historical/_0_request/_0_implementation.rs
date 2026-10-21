@@ -13,6 +13,15 @@ pub struct HistoricalRequest {
     pub runtime_binding: Value,
     pub replacement_transaction_base64: Option<String>,
     pub requested_account_overrides: Option<Value>,
+    /// A bundle after or instead of the target, on state overrides. Absent from older requests.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub what_if: Option<super::super::WhatIf>,
+    /// Canonical account read scope; does not change the original transaction.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub extra_accounts: Vec<String>,
+    /// Start at transaction zero of the next produced block after this slot.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub after_slot: Option<u64>,
     pub bank_inputs: Vec<String>,
     pub metadata_policy: MetadataPolicy,
     pub limits: Limits,
@@ -53,6 +62,18 @@ impl HistoricalRequest {
         if genesis.len() != 32 || bs58::encode(genesis).into_string() != self.genesis_hash {
             return Err(invalid("invalid genesis"));
         }
+        let mut accounts = std::collections::BTreeSet::new();
+        for account in &self.extra_accounts {
+            let bytes = bs58::decode(account)
+                .into_vec()
+                .map_err(|_| invalid("invalid extra account"))?;
+            if bytes.len() != 32
+                || bs58::encode(bytes).into_string() != *account
+                || !accounts.insert(account)
+            {
+                return Err(invalid("invalid/duplicate extra account"));
+            }
+        }
         let slot = self.candidate["slot"]
             .as_u64()
             .filter(|n| *n <= 9_007_199_254_740_991)
@@ -61,6 +82,16 @@ impl HistoricalRequest {
             .as_u64()
             .filter(|n| *n <= 9_007_199_254_740_991)
             .ok_or_else(|| invalid("historical transaction index required"))?;
+        if let Some(after) = self.after_slot {
+            if after >= slot
+                || after > 9_007_199_254_740_991
+                || self.candidate["transactionIndex"] != 0
+            {
+                return Err(invalid(
+                    "afterSlot must precede the selected block at transaction zero",
+                ));
+            }
+        }
         Digest::new(
             self.candidate["blockSourceHash"]
                 .as_str()
@@ -130,6 +161,21 @@ impl HistoricalRequest {
             .is_some_and(|v| !v.is_array())
         {
             return Err(invalid("requested overrides must be an array"));
+        }
+        if let Some(what_if) = &self.what_if {
+            if self.after_slot.is_some() && what_if.mode != crate::WhatIfMode::Replace {
+                return Err(invalid(
+                    "afterSlot payload starts before the first archived transaction",
+                ));
+            }
+            if self.replacement_transaction_base64.is_some()
+                || self.requested_account_overrides.is_some()
+            {
+                return Err(invalid(
+                    "whatIf replaces replacementTransactionBase64 and requestedAccountOverrides",
+                ));
+            }
+            what_if.validate()?;
         }
         Ok(())
     }

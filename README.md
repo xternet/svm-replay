@@ -6,166 +6,187 @@
 [![CI](https://github.com/xternet/svm-replay/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/xternet/svm-replay/actions/workflows/ci.yml?query=branch%3Amain)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-Replay a Solana transaction at its historical position, then test a different
-payload, account state or program code.
+Replay Solana transactions, test changes, and fork historical state.
 
-- **Historical data:** Built on the historical state required for correct replay (not a rough estimate), using Alchemy's [Account Archive](https://www.alchemy.com/blog/solana-account-archive) (August 2026; history since July 2025).
-- **Checked replay:** Rebuilds the state before your transaction and checks the original result before testing your changes.
-- **Validation:** Tested on complex DeFi transactions; missing historical data returns explicit unsupported results. [Results](docs/validation.md) · [Limitations](docs/limitations.md).
+![#debugging](https://img.shields.io/badge/%23debugging-0F766E?style=flat-square) ![#simulation](https://img.shields.io/badge/%23simulation-0F766E?style=flat-square) ![#security-research](https://img.shields.io/badge/%23security--research-0F766E?style=flat-square) ![#backtesting](https://img.shields.io/badge/%23backtesting-0F766E?style=flat-square) ![#historical-testing](https://img.shields.io/badge/%23historical--testing-0F766E?style=flat-square)
 
-## What to use it for
+## Quick start
 
-- **Debugging:** reproduce a failed transaction and test a fix.
-- **Backtesting:** try alternative swaps, arbitrage or liquidation payloads.
-- **Security:** investigate historical incidents and changed inputs.
-- **Regression tests:** replay real cases in CI or from developer tools and agents.
-
-## How to run
-
-[Native downloads](https://github.com/xternet/svm-replay/releases/latest) ·
-[Rust CLI](https://crates.io/crates/svm-replay) ·
-[Rust API](https://crates.io/crates/svm-replay-engine) ·
-[TypeScript SDK](https://www.npmjs.com/package/@xternet/svm-replay)
-
-Cargo builds the CLI; npm provides the SDK and launcher. Both need the **native runtime bundle**.
-
-Requirements:
-
-- Installed `svm-replay` command: [installation guide](https://github.com/xternet/svm-replay/blob/main/docs/installation.md#guided-offline-installation).
-- For live replay only: an Alchemy key with [Account Archive access](https://github.com/xternet/svm-replay/blob/main/docs/providers.md) and a transaction signature.
-- Automatic runtime selection covers reviewed slots **353951234–451646918**, not every transaction in Alchemy's archive. Missing runtime/state support returns an explicit outcome.
-
-Examples use Bash/Zsh; live data requests consume Alchemy credits.
-Measured cold examples cost roughly **$0.00015–$0.019** at published RPC rates;
-see [measurements and billing assumptions](docs/providers.md#measured-cold-examples).
-
-### 1. Replay a cached example (offline demo)
+Linux / macOS / WSL2:
 
 ```sh
-svm-replay --demo
+curl -fsSL https://raw.githubusercontent.com/xternet/svm-replay/v0.2.0/install.sh | sh
+export PATH="$HOME/.local/bin:$PATH"
+svm-replay demo
 ```
 
-Replays bundled inputs to demonstrate the tool; no key or network.
+Windows (PowerShell):
 
-### 2. Replay your transaction with a key
-
-```sh
-API_ALCHEMY="your-key" svm-replay --tx SIGNATURE
+```powershell
+& ([scriptblock]::Create((Invoke-WebRequest -UseBasicParsing https://raw.githubusercontent.com/xternet/svm-replay/v0.2.0/install.ps1).Content))
+$env:PATH = "$env:LOCALAPPDATA\svm-replay\bin;$env:PATH"
+svm-replay demo
 ```
 
-Replace `SIGNATURE` with your transaction signature; no wallet or broadcast.
-Returns JSON: status, logs, CU, account changes and verification receipt.
-Unsupported replays return a [category and available partial evidence](docs/usage.md#incomplete-replays), never an invented final state.
-JSON is indented automatically in your terminal; pipes and saved files stay compact.
-Inline keys may enter shell history; prefer `.env` below.
+No Node.js or Rust compiler required. Offline demo, no key. [Installation](docs/installation.md).
 
-### 3. Keep your key in `.env`
+<sub>SDKs: <code>npm install @xternet/svm-replay@0.2.0</code> · <code>cargo add svm-replay-engine@0.2.0</code> (native bundle required).</sub>
 
-Put in `.env` (keep private and out of Git):
+## Setup
 
-```dotenv
-API_ALCHEMY="your-key"
+1. Install the `svm-replay` command and its native bundle: [installation guide](docs/installation.md).
+2. For your own transactions, put an Alchemy key with
+   [Account Archive access](docs/providers.md) in a `.env` file where you run it (keep it private):
+
+   ```dotenv
+   API_ALCHEMY="your-key"
+   ```
+
+A transaction's first replay downloads its history (measured $0.00015–$0.019 of Alchemy
+credit, [details](docs/providers.md#measured-cold-examples)); later runs use the cache.
+
+## Commands
+
+<table>
+<thead>
+<tr><th align="left">Command</th><th align="left">Optional parameters</th><th align="left">Description</th></tr>
+</thead>
+<tbody>
+<tr><td rowspan="10" valign="top"><code>svm-replay tx SIGNATURE</code></td><td>—</td><td>Replay and verify an on-chain transaction</td></tr>
+<tr><td><code>--state-overrides @state.json</code></td><td>Modify starting balances, data or programs</td></tr>
+<tr><td><code>--provider alchemy --key env:API_ALCHEMY</code></td><td>Select Alchemy and its credential</td></tr>
+<tr><td><code>--config FILE</code></td><td>Load provider settings from TOML</td></tr>
+<tr><td><code>--data-dir DIR</code></td><td>Choose the cache and run directory</td></tr>
+<tr><td><code>--human</code></td><td>Print a readable summary</td></tr>
+<tr><td><code>--collect all</code></td><td>Capture calls, instructions, registers and memory</td></tr>
+<tr><td><code>--fields status,logs,computeUnits</code></td><td>Select output fields</td></tr>
+<tr><td><code>--out DIR</code></td><td>Save results</td></tr>
+<tr><td><code>--progress</code></td><td>Emit progress events on stderr</td></tr>
+<tr><td rowspan="2" valign="top"><code>svm-replay payload PAYLOAD --after &lt;SIGNATURE|SLOT&gt;</code></td><td>—</td><td>Execute one transaction or an ordered bundle (JSON/@FILE)</td></tr>
+<tr><td><code>--state-overrides @state.json</code></td><td>Modify starting account/program state</td></tr>
+<tr><td rowspan="2" valign="top"><code>svm-replay fork --after &lt;SIGNATURE|SLOT&gt;</code></td><td>—</td><td>Serve a frozen historical RPC fork</td></tr>
+<tr><td><code>--port 8999</code></td><td>Set HTTP port; WebSocket uses the next port</td></tr>
+<tr><td><code>svm-replay demo</code></td><td>—</td><td>Run the offline example; no key needed</td></tr>
+<tr><td><code>svm-replay doctor</code></td><td>—</td><td>Verify the installation</td></tr>
+<tr><td><code>svm-replay runtimes</code></td><td>—</td><td>List installed runtimes and coverage</td></tr>
+<tr><td><code>svm-replay completions SHELL</code></td><td>—</td><td>Generate shell completions</td></tr>
+<tr><td><code>svm-replay --help</code></td><td>—</td><td>Show all commands and options</td></tr>
+</tbody>
+</table>
+
+## Surfpool
+
+These historical features require the integration build, not an unmodified upstream release.
+Install a matching SVM Replay bundle and make its CLI available on `PATH`. Historical mode
+launches SVM Replay's pinned historical runtime; it does not execute in Surfpool's current SVM.
+
+Declare provider defaults in `Surfpool.toml`, keeping the actual key out of the file:
+
+```toml
+[historical]
+provider = "alchemy"
+
+[historical.providers.alchemy]
+adapter = "alchemy"
+key_env = "API_ALCHEMY"
 ```
 
-Then run (the CLI reads `.env` automatically):
+Set `API_ALCHEMY` in your shell or CI secret environment. Then one command prepares and
+serves the historical fork; no separate SVM Replay process needs to be started manually.
 
-```sh
-svm-replay --tx SIGNATURE
-```
-
-Works on all platforms; use `.env` in the directory where you run the command.
-
-### 4. Choose what to test
-
-With your key in `.env`:
-
-| Command | Purpose |
+| Command | Description |
 |---|---|
-| **Replay** | |
-| `svm-replay` | Interactive menu |
-| `svm-replay --tx SIGNATURE` | Replay; print readable JSON automatically |
-| **Output & saving** | |
-| `svm-replay --tx SIGNATURE --json` | Force compact JSON |
-| `svm-replay --tx SIGNATURE --human` | Readable summary |
-| `svm-replay --tx SIGNATURE --out ./results` | Save compact JSON to a file |
-| `svm-replay --tx SIGNATURE --pretty --out ./results` | Save indented JSON to a file |
-| `svm-replay --tx SIGNATURE --fields status,logs,computeUnits` | Select output fields |
-| **Account overrides & replacement** | |
-| `svm-replay --tx SIGNATURE --overrides '[{"pubkey":"ACCOUNT_ADDRESS","lamports":"1000000000"}]'` | Set an account to 1 SOL before replaying the original |
-| `svm-replay --tx SIGNATURE --overrides @./accounts.json` | Same override format, loaded from a JSON file |
-| `svm-replay --tx SIGNATURE --replace '{"transactionBase64":"BASE64_SERIALIZED_TRANSACTION"}'` | Execute a new transaction instead of the original, at the same historical boundary |
-| `svm-replay --tx SIGNATURE --replace @./payload.json` | Same replacement format, loaded from a JSON file |
-| **Execution data** | |
-| `svm-replay --tx SIGNATURE --collect '{"calls":true,"instructions":true,"registers":true,"memory":false}'` | Choose extra execution data |
-| `svm-replay --tx SIGNATURE --collect @./capture.json` | Same collection format, loaded from a JSON file |
-| `svm-replay --tx SIGNATURE --collect all` | Complete collection of all supported categories, or an explicit error |
-| **Cache & help** | |
-| `svm-replay --tx SIGNATURE --no-cache` | Run without reusable cache |
-| `svm-replay doctor` | Check installation |
-| `svm-replay --help` | All options |
+| `surfpool start --after SIGNATURE` | Start after the transaction, using `Surfpool.toml` provider defaults |
+| `surfpool start --after SLOT` | Start at the initialized next produced slot |
+| `surfpool start --after SIGNATURE --historical-provider alchemy --key env:API_ALCHEMY` | Select the provider and credential reference explicitly, without TOML |
+| `surfpool stop --rpc-url http://127.0.0.1:8899` | Stop the historical RPC server |
 
-Standard JSON includes status, logs, CU, account changes and verification.
-Terminal JSON is indented by default. Add `--pretty` to indent piped or saved JSON too;
-use `--json` to force compact terminal output. Data is unchanged.
-Use `--human` for a short summary instead; it cannot be combined with `--pretty`.
-`--fields` limits returned fields; it does not change what `--collect` captures.
+HTTP defaults to `127.0.0.1:8899`; WebSocket uses port 8900. Surfpool owns the public RPC,
+Studio and profiling; SVM Replay executes them on a private backend. Slot production is off
+until explicit advancement. Surfpool keeps its normal TUI; new transactions show their
+signatures, status and measured CU. Tab advances one slot; use `--no-tui` for headless operation.
+Historical mode uses neither a current-state fallback nor `--match-datasource`.
 
-`@path` reads a JSON file with the same structure as the inline example.
-Replace capitalized placeholders; `transactionBase64` is a complete serialized
-transaction encoded as base64, not a signature ([construction example](examples/anchor/README.md)).
-Overrides/replacements start before the original transaction; unchanged-original
-verification runs separately. Nothing is broadcast. Options can be combined:
+## Anchor
+
+Requires the integration builds of Anchor and Surfpool, plus an installed SVM
+Replay native bundle. Generate a workspace:
 
 ```sh
-svm-replay --tx SIGNATURE --replace @./payload.json --overrides @./accounts.json --collect all --out ./results
+anchor init my-project --test-template mocha --historical
+cd my-project
+anchor build --arch v0
+anchor test --skip-build --skip-deploy
 ```
 
-### Choose additional data
+Set the provider in `Anchor.toml` and export `API_ALCHEMY`:
 
-- **calls:** nested program calls, such as Aggregator → DEX → Token Program.
-- **instructions / registers:** VM instruction positions and register values, captured together.
-- **memory:** supported memory observations; also includes instruction/register data.
+```toml
+[historical]
+provider = "alchemy"
 
-Omitted switches are false; dependencies above still apply. Capture retains call
-context. Without explicit collection limits, incomplete capture is an error;
-explicit limits allow labelled partial output. Unsupported requests fail explicitly;
-truncated captures are labelled.
+[historical.providers.alchemy]
+adapter = "alchemy"
+key_env = "API_ALCHEMY"
+```
 
-[Collection filters, limits and examples](https://github.com/xternet/svm-replay/blob/main/docs/tracing.md)
-· [Payloads, overrides and other options](https://github.com/xternet/svm-replay/blob/main/docs/usage.md)
+Select the boundary **in test code**, using the generated helper:
+The generated test's `before` hook funds the wallet, installs the ELF and declares
+new accounts; keep that setup when using this abbreviated snippet.
 
-## Why this exists
+```ts
+const fork = await HistoricalFork.start({ after: "413023260" });
+try {
+  const program = new Program(idl, fork.provider());
+  // Call program.methods.<method>(...).rpc() and assert the results.
+  await fork.advance(1); // Time stays frozen unless explicitly advanced.
+} finally {
+  await fork.close();
+}
+```
 
-Standard Solana RPC can return old transactions and blocks, but not arbitrary
-historical account data. Fetching an old transaction and executing it against
-current accounts does not reproduce its historical conditions.
+| Command or test API | Description |
+|---|---|
+| `anchor init NAME --test-template mocha --historical` | Generate test-owned historical forks |
+| `anchor build --arch v0` | Build a program format supported at the selected boundary |
+| `anchor test --skip-build --skip-deploy` | Run the built program; each test starts its own fork |
+| `HistoricalFork.start({after: SIGNATURE_OR_SLOT})` | Start an owned Surfpool child at that boundary |
+| `fork.provider()` | Create an explicit Anchor provider for this fork |
+| `fork.rpc(method, params)` | Use Surfpool's public RPC/cheatcodes |
+| `fork.advance(1)` / `fork.close()` | Advance explicitly / stop the owned fork |
 
-Historical accounts alone are not enough either: replay needs the state immediately
-before the target transaction, relevant predecessor effects and compatible runtime
-rules. SVM Replay reconstructs that boundary and verifies the original before
-testing modifications. Alchemy is the initial data provider; its archive excludes
-vote accounts and per-slot sysvars. [Provider coverage and limitations](https://github.com/xternet/svm-replay/blob/main/docs/providers.md).
+Mocha/Jest support TS and JS; the RPC Rust template is also supported.
+In-process LiteSVM/Mollusk templates reject historical mode.
+Anchor reuses its fixture compiler; Surfpool owns RPC/WS and chain operations;
+SVM Replay owns historical data and execution. No SVM Replay directory or SDK
+dependency is needed inside the workspace. The fast ELF fixture setup is not
+a loader deployment.
 
-[Validation evidence](https://github.com/xternet/svm-replay/blob/main/docs/validation.md) ·
-[Platform requirements](https://github.com/xternet/svm-replay/blob/main/docs/installation.md#platforms) ·
-[Full limitations](https://github.com/xternet/svm-replay/blob/main/docs/limitations.md)
+See the generated `HISTORICAL.md`,
+[integration details](docs/integrations.md#anchor) and
+[CI example](examples/ci/README.md).
 
-## Integrations and documentation
+## Integrate into your own tool
 
-Use the CLI directly, the [TypeScript SDK](https://github.com/xternet/svm-replay/blob/main/src/bindings/typescript/README.md),
-or the [Rust API](https://github.com/xternet/svm-replay/blob/main/examples/rust/README.md).
-[Surfpool](https://github.com/xternet/svm-replay/blob/main/examples/surfpool/README.md),
-[Anchor](https://github.com/xternet/svm-replay/blob/main/examples/anchor/README.md) and
-[CI](https://github.com/xternet/svm-replay/blob/main/examples/ci/README.md) examples are our
-integration recipes, not upstream features or endorsements.
+Add historical forks and transaction replay to your tool through the SDK or RPC.
+See the [integration guide](docs/tool-integration.md) for examples, lifecycle handling and limitations.
 
-[Usage/results](https://github.com/xternet/svm-replay/blob/main/docs/usage.md) ·
-[Examples](https://github.com/xternet/svm-replay/blob/main/examples/README.md) ·
-[Trace exports](https://github.com/xternet/svm-replay/blob/main/docs/tracing.md) ·
-[Capabilities and interface gaps](https://github.com/xternet/svm-replay/blob/main/docs/capabilities.md) ·
-[Architecture](https://github.com/xternet/svm-replay/blob/main/docs/architecture.md) ·
-[Contributing](https://github.com/xternet/svm-replay/blob/main/CONTRIBUTING.md) ·
-[Security](https://github.com/xternet/svm-replay/blob/main/SECURITY.md)
+## Documentation
 
-Owned code: [Apache-2.0](https://github.com/xternet/svm-replay/blob/main/LICENSE).
-Runtime components retain their licenses; see [NOTICE](https://github.com/xternet/svm-replay/blob/main/NOTICE).
+- [Why SVM Replay?](docs/why-svm-replay.md)
+- [Installation](docs/installation.md)
+- [Usage and results](docs/usage.md)
+- [Integrate your tool](docs/tool-integration.md)
+- [Forks](docs/integrations.md#historical-forks-surfpool-anchor-ci)
+- [Traces](docs/tracing.md)
+- SDKs: [TypeScript](src/bindings/typescript/README.md) · [Rust](examples/rust/README.md)
+- [Examples](examples/README.md)
+- [Capabilities](docs/capabilities.md)
+- [Runtimes](docs/runtimes.md)
+- [Validation](docs/validation.md)
+- [Limitations](docs/limitations.md)
+- [Architecture](docs/architecture.md)
+- [Contributing](CONTRIBUTING.md)
+- [Security](SECURITY.md)
+
+Owned code: [Apache-2.0](LICENSE). Runtime components keep their licenses; see [NOTICE](NOTICE).

@@ -13,7 +13,7 @@ data you are not authorized to share.
 
 ## Scope and support
 
-The current 0.1.0 release candidate is the maintenance target; no older release line
+The current 0.2.0 release candidate is the maintenance target; no older release line
 or response-time guarantee is offered. Report issues in input validation, worker
 execution, artifact handling, credential exposure or replay correctness.
 

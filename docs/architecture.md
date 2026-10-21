@@ -13,7 +13,18 @@ Start at [src/cli/main.rs](../src/cli/main.rs) for the executable or
 ## Repository map
 
 ```text
+install.sh / install.ps1        Thin native-install entries (~25 lines)
 src/                           Shipped implementation
+  installer/
+    _0_unix/
+      main.sh                  Parse options and coordinate installation
+      _0_archive.sh            Download, checksum and safe extraction
+      _1_install.sh            Delegate verification/install to the native CLI
+    _1_windows/
+      main.ps1                 Equivalent PowerShell flow
+      _0_archive.ps1           Archive admission
+      _1_install.ps1           Native install and user-local launcher
+    _2_release/checksums.mjs    Maintainer-only verified SHA256SUMS generation
   cli/
     main.rs                    Executable entry, CLI handling and worker-owner dispatch
     _0_arguments/              Commands and configuration
@@ -31,6 +42,7 @@ src/                           Shipped implementation
     _8_terminal/               Menus, progress and readable summaries
     _9_json/                   Terminal-aware JSON formatting; compact files and unchanged evidence
     _10_run/                   Execute CLI request and present its result
+    _11_session/               Local verified historical RPC lifecycle; no provider logic
   engine/
     mod.rs                     Public API and stage exports
     _0_validate/               Request admission
@@ -66,6 +78,7 @@ src/                           Shipped implementation
         _8_slot_hashes/       Validate evidence-bound SlotHashes reconstruction
         _9_program_header/   Shared program-header proof contracts
       _4_dependencies/_8_credits/  Credit invariance, closure planning, proof validation
+      _14_progress/           Opt-in coordinator progress and one job heartbeat
       _12_sources/_0_alchemy/  Bounded acquisition and finalized discovery cache
         _11_lookup/          Guarded transaction lookup recovery
   protocol/                    Exact JSON, request/result types and identities
@@ -81,8 +94,25 @@ src/                           Shipped implementation
       ci.ts                    Assert replay completion
 examples/                      Consumer recipes, one directory per use case
 tests/                         Cross-component checks grouped by responsibility
-docs/                          Public guides, capabilities inventory and qualification limits
+docs/                          Public guides, capabilities inventory, runtime versions and qualification limits
+  tool-integration.md          RPC/SDK integration quickstart for tool authors
 ```
+
+Historical fork boundaries are projected by `engine/_shared/_15_boundary` from
+pinned receipts, prepared inputs, results and original-control journals. That
+component owns lookup-table resolution, same-slot state selection, companion
+expansion and historical feature-account derivation. It reuses the protocol wire
+decoder; `svm-replay boundary --request FILE` exposes the offline projection.
+The TypeScript adapter transports jobs and serves the resulting images over local
+RPC. Its launcher delegates process lifecycle to the owned fork CLI module.
+
+Historical sessions live in `engine/_shared/_16_historical`: explicit provider
+configuration, pinned worker supervision, verified receipt admission and fresh
+control equality, then native JSON-RPC over loopback HTTP, with signature and slot
+subscriptions over WebSocket on the next port. The CLI `_11_session` owns signals,
+endpoint reservation and readiness; engine worker ownership/cleanup is reused.
+Bank state (sends, hydration, explicit slot advance) lives in the native worker's
+session; the engine maps RPC and owns provider acquisition.
 
 One Cargo workspace. The TypeScript binding is a language binding, not another
 engine. Root files are project manifests, policies and entry documentation.

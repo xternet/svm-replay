@@ -29,6 +29,26 @@ fn captured_discovery_retains_original_pins_and_records_observations() {
 }
 
 #[test]
+fn fresh_journals_share_source_instances_but_not_observations() {
+    let row = account(10, "123");
+    let calls = Arc::new(AtomicUsize::new(0));
+    let mut first = CompositeSource::new(vec![controlled(
+        "shared",
+        row.clone(),
+        calls.clone(),
+        false,
+    )])
+    .unwrap();
+    first.require(&row["query"]).unwrap();
+    let mut second = first.fresh_journal();
+    assert!(second.observations().is_empty());
+    second.require(&row["query"]).unwrap();
+    assert_eq!(calls.load(Ordering::SeqCst), 2);
+    assert_eq!(first.observations().len(), 1);
+    assert_eq!(second.observations().len(), 1);
+}
+
+#[test]
 fn discovery_rejects_conflicting_captures_and_ambiguous_slot_pins() {
     let a = Capture::new(&[block(3)], identity("a", false));
     let b = Capture::new(&[block(4)], identity("b", false));

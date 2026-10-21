@@ -1,0 +1,62 @@
+# Copy into a generated historical Anchor application using after: "413023260".
+# This fixture contains only the smoke boundary; other historical reads fail.
+# The isolated runner supplies matching reviewed tools, Node and the SBF toolchain.
+name: Anchor historical offline
+on: workflow_dispatch
+permissions:
+  contents: read
+jobs:
+  historical:
+    runs-on: [self-hosted, linux, x64, svm-replay-integration]
+    timeout-minutes: 30
+    env:
+      ANCHOR_SHA256: ${{ vars.ANCHOR_SHA256 }}
+      SURFPOOL_SHA256: ${{ vars.SURFPOOL_SHA256 }}
+      SVM_REPLAY_SHA256: ${{ vars.SVM_REPLAY_SHA256 }}
+      HISTORICAL_FIXTURE_URL: ${{ vars.HISTORICAL_FIXTURE_URL }}
+      HISTORICAL_FIXTURE_SHA256: ${{ vars.HISTORICAL_FIXTURE_SHA256 }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Verify reviewed tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${ANCHOR_SHA256:?Set the reviewed Anchor binary hash}"
+          : "${SURFPOOL_SHA256:?Set the reviewed Surfpool binary hash}"
+          : "${SVM_REPLAY_SHA256:?Set the reviewed SVM Replay binary hash}"
+          printf '%s  %s\n' "$ANCHOR_SHA256" "$(command -v anchor)" \
+            "$SURFPOOL_SHA256" "$(command -v surfpool)" \
+            "$SVM_REPLAY_SHA256" "$(command -v svm-replay)" | sha256sum --check -
+          svm-replay doctor
+      - run: npm ci --ignore-scripts
+      - run: anchor build --arch v0
+      - name: Prepare a clean recorded cache
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${HISTORICAL_FIXTURE_URL:?Set the cleared public fixture URL}"
+          : "${HISTORICAL_FIXTURE_SHA256:?Set its SHA256}"
+          curl --fail --location --proto '=https' --proto-redir '=https' --max-time 180 \
+            "$HISTORICAL_FIXTURE_URL" -o "$RUNNER_TEMP/fixture.tar.gz"
+          printf '%s  %s\n' "$HISTORICAL_FIXTURE_SHA256" "$RUNNER_TEMP/fixture.tar.gz" \
+            | sha256sum --check -
+          python3 -m tarfile --extract "$RUNNER_TEMP/fixture.tar.gz" \
+            "$RUNNER_TEMP/fixture" --filter data
+          test ! -e .surfpool/history/cache
+          mkdir -p .surfpool/history
+          cp -R "$RUNNER_TEMP/fixture/svm-replay-smoke-413023260/data/cache" \
+            .surfpool/history/cache
+      - name: Test-owned forks with no provider access
+        shell: bash
+        env:
+          API_ALCHEMY: offline-fixture-not-a-key
+        run: |
+          set -euo pipefail
+          export TEST_PATH="$PATH"
+          export SVM_REPLAY_BIN="$(command -v svm-replay)"
+          sudo --preserve-env unshare --net bash -euc '
+            ip link set lo up
+            exec setpriv --reuid="$SUDO_UID" --regid="$SUDO_GID" --init-groups \
+              env PATH="$TEST_PATH" anchor test --skip-build --skip-deploy'

@@ -87,6 +87,7 @@ pub(in super::super) fn get(
             "hit byte identity differs",
         ));
     }
+    crate::shared::progress::cache_hit();
     Ok(Some(bytes))
 }
 

@@ -90,7 +90,7 @@ Standard output contains status/logs/CU/account transitions and verification.
 Collection adds `trace.exports[].data`: call journal events, and requested bounded
 SBPF observations. Inspect completeness: `TRUNCATED` means missing observations,
 not a complete trace. Human output is only a bounded preview.
-See the [README examples](../README.md#choose-additional-data).
+See the [README commands](../README.md#commands) and the [live command example](#live-command-example).
 
 Memory rows identify invocation, program counter, address, access width, load/store,
 success/fault and observed bytes. Successful stores include before/after bytes.
@@ -189,3 +189,86 @@ a new request ID with `action: {kind: "step"}` or
 target after resuming. This is a protocol fragment, not a standalone debugger
 client. Closing stdin cancels; a pipe containing one command then EOF will not
 keep the session alive.
+
+
+## Loading progress
+
+`--progress` enables versioned NDJSON on stderr for signature replay and advanced
+`simulate`. Without it, command output is unchanged. Stdout retains the final
+JSON receipt. Progress is advisory; the receipt, original-control verification,
+requested verification and pinned artifacts remain authoritative.
+
+Every event uses `schema: "svm-replay-progress/v1"`. The SDK exports `ProgressEvent`
+and accepts `onProgress` on `replay()` and `simulate()` options. It delivers events
+while the native process runs, before the returned promise settles. Progress lines
+are removed from returned stderr; other diagnostics keep the existing byte bound.
+Each progress line is bounded at 64 KiB and malformed v1 events reject with
+`HOST_PROTOCOL`. Other stderr, including unknown schema versions, remains diagnostics.
+
+| Field | Meaning |
+| --- | --- |
+| `schema` | Exactly `svm-replay-progress/v1` |
+| `origin` | `native`, or `sdk` for a terminal caused by host timeout/cancellation/process failure |
+| `sequence` | Job-local increasing integer, starting at 1 |
+| `kind` | `phase`, `advance`, `heartbeat`, or `terminal` |
+| `phase` | Current phase from the list below; omitted for an SDK terminal before any native observation |
+| `elapsedMs` | Monotonic elapsed job time |
+| `phaseDurationMs` | Time since entering the current phase; omitted when no native phase is known |
+| `sinceAdvanceMs` | Time since a phase change, changed dependency total, or positive measured work |
+| `attempt` | 0 during source preparation; increasing execution attempt number thereafter |
+| `fetchedAccounts` | Optional cumulative validated account observations fetched by provider transport, including exact absence |
+| `cacheHits` | Optional cumulative validated discovery/raw/prepared/result cache reads; a hit is an input or result, not a replayed transaction |
+| `downloadedBytes` | Optional cumulative bytes in fully observed HTTP response bodies, including error bodies; excludes cache reads and budget reservations |
+| `downloadedBytesKnown` | Optional; false after a transport failure with unknown partial bytes, making `downloadedBytes` a lower bound |
+| `processedEarlierTransactions` | Optional current-attempt prefix executions confirmed by checkpoint worker metrics; resets on another attempt |
+| `earlierTransactionsTotal` | Optional `{value: number, status: "provisional" \| "final"}`; the selected prefix size, not the whole block |
+| `outcome` | Terminal only: `COMPLETED`, `ERROR`, `CANCELLED`, `TIMEOUT`, `NEEDS_INPUT`, `UNSUPPORTED`, or `MISMATCH` |
+
+Phases are `locating_transaction`, `resolving_dependencies`,
+`fetching_historical_accounts`, `replaying_earlier_transactions`,
+`verifying_original`, `saving_inputs`, and `executing_requested` for a variant.
+A worker invocation that reconstructs its prefix and executes its target has no
+internal phase stream: it stays in the replay phase until control verification
+begins. Trace workers follow the same rule. Missing metrics are omitted; worker
+completion is never inferred from cache entries, requests, elapsed time or totals.
+
+Dependency discovery can increase provisional prefix totals. `final` means closed
+for the current prepared attempt; subsequent attempts carry their own identity and
+may change the total. Processed counts describe actual executions in that attempt,
+including repeated prefix execution if a worker reports it. Cached prefix/result
+reuse contributes zero executions. There are no percentages or ETAs.
+
+Phase changes and totals emit immediately. Positive counter updates are coalesced
+to at most one per second. One independent heartbeat runs every 30 seconds even
+while the coordinator waits on a provider or worker. An increasing `sinceAdvanceMs`
+describes waiting, without asserting failure. Terminal publication joins and stops
+the timer. The CLI emits one terminal event after writing its final output.
+
+```ts
+import { Replay } from "@xternet/svm-replay";
+
+const replay = await Replay.installed(bundleDirectory);
+const result = await replay.replay({
+  tx: signature,
+  onProgress(event) {
+    const label = event.phase === undefined ? "Replay finished" : event.phase.replaceAll("_", " ");
+    console.error(`${label} · ${Math.floor(event.elapsedMs / 1000)}s`);
+  },
+  signal: abortController.signal,
+});
+console.log(result.receipt.outcome);
+```
+
+Keep callbacks quick and synchronous; a thrown callback terminates and reaps the
+child and rejects with `PROGRESS_CALLBACK`. No more callbacks are attempted after
+that exception. The SDK emits a terminal with `origin: "sdk"` if the child cannot
+publish one. If the SDK deadline caused cooperative native cancellation, the
+terminal outcome is `TIMEOUT`, matching the SDK error. Native `COMPLETED` means the
+replay job completed; inspect the verified transaction result for execution status.
+The SDK still validates receipts and artifacts after receiving progress.
+
+Rust callers can use `shared::progress::ProgressJob::start(initial_phase, sink)`
+around a coordinator call and `finish(outcome)` after its result. The guard is
+scoped to its calling thread; its heartbeat works independently of blocking calls.
+Dropping a guard without finishing publishes `ERROR` and stops its timer. The CLI
+uses this same service across lookup, source preparation, workers and output.

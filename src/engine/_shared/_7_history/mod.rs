@@ -18,5 +18,7 @@ pub use history::{
 use history::invalid;
 mod _1_history_validation;
 use _1_history_validation as history_validation;
+mod _2_account_coverage;
+pub use _2_account_coverage::assert_account_coverage;
 
 pub use history_validation::source_error;

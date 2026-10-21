@@ -39,7 +39,7 @@ impl AlchemySource {
                 request["params"][1]["maxSupportedTransactionVersion"] = json!(1);
                 require(request==json!({"jsonrpc":"2.0","id":1,"method":"getTransaction","params":[signature,{"encoding":"json","commitment":"finalized","maxSupportedTransactionVersion":1}]}),
                     "SOURCE_INTEGRITY","discovery request differs")
-            })
+            }).map_err(|error| attribute_source_failure(error, &self.identity))
     }
     pub(super) fn discover_transaction_uncached(&self, signature: &str) -> Result<Value> {
         address(

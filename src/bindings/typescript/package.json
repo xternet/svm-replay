@@ -1,6 +1,6 @@
 {
   "name": "@xternet/svm-replay",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "license": "Apache-2.0",
   "author": "xternet",
   "repository": { "type": "git", "url": "git+https://github.com/xternet/svm-replay.git", "directory": "src/bindings/typescript" },
@@ -12,9 +12,9 @@
   "type": "module",
   "engines": { "node": ">=22" },
   "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" }, "./adapters": { "types": "./dist/adapters/index.d.ts", "import": "./dist/adapters/index.js" } },
-  "files": ["dist", "install.mjs", "installation.mjs", "launcher.mjs", "README.md", "LICENSE", "NOTICE"],
+  "files": ["dist", "install.mjs", "installation.mjs", "launcher.mjs", "fork.mjs", "README.md", "LICENSE", "NOTICE"],
   "bin": { "svm-replay-install": "./install.mjs", "svm-replay": "./launcher.mjs" },
-  "scripts": { "build": "tsc -p tsconfig.json", "test": "npm run build && node --test tests/*.test.mjs", "prepack": "npm run build" },
+  "scripts": { "build": "tsc -p tsconfig.json", "test": "npm run build && node --test tests/*.test.mjs", "prepack": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && npm run build" },
   "dependencies": { "@types/node": "22.18.6" },
   "devDependencies": { "typescript": "5.9.3" }
 }

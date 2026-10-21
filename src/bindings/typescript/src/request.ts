@@ -24,7 +24,7 @@ export function decodeJson(text: string): Json {
 /** A convenience builder, not a historical-runtime oracle. Rust validates every request. */
 export function historicalRequest(input: HistoricalInput): JsonObject {
     if (!["v2-2","v2-3","v3-0","v3-1","v4-0","v4-1","v4-2"].includes(input.family))
-        throw new ReplayError("UNSUPPORTED_RUNTIME", "runtime family is not reviewed");
+        throw new ReplayError("UNSUPPORTED_RUNTIME", "runtime family is not reviewed; `svm-replay capabilities` lists the pinned runtimes");
     const metadataPolicy=input.metadataPolicy === undefined ? "STRICT" : input.metadataPolicy;
     if (!["STRICT","ARCHIVED_COMPUTE_METER_WARNING"].includes(metadataPolicy))
         throw new ReplayError("INVALID_REQUEST", "unknown metadata policy");
@@ -33,6 +33,7 @@ export function historicalRequest(input: HistoricalInput): JsonObject {
         candidate:input.candidate,runtimeBinding:input.runtimeBinding,
         replacementTransactionBase64:input.replacementTransactionBase64 === undefined ? null : input.replacementTransactionBase64,
         requestedAccountOverrides:input.requestedAccountOverrides === undefined ? null : input.requestedAccountOverrides,
+        ...(input.whatIf === undefined ? {} : {whatIf:input.whatIf}),
         bankInputs:input.bankInputs === undefined ? [] : input.bankInputs,metadataPolicy,limits};
     return decodeJson(encodeJson(request)) as JsonObject;
 }

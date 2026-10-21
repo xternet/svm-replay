@@ -1,6 +1,6 @@
 use super::*;
 
-fn wire(mask: u32) -> Vec<u8> {
+pub(crate) fn wire(mask: u32) -> Vec<u8> {
     let mut bytes = vec![129, 1, 0, 1];
     bytes.extend_from_slice(&mask.to_le_bytes());
     bytes.extend_from_slice(&[4; 32]);

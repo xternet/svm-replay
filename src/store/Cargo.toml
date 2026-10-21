@@ -1,6 +1,6 @@
 [package]
 name = "svm-replay-store"
-version = "0.1.0"
+version = "0.2.0"
 license = "Apache-2.0"
 description = "Content-addressed local cache and durable receipts for SVM Replay"
 edition = "2021"

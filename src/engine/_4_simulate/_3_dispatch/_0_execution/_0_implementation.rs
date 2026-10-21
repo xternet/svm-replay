@@ -1,4 +1,5 @@
 use super::*;
+use crate::shared::progress::{self, Phase};
 
 pub(crate) fn execute(
     request: &PreparedRequest,
@@ -14,9 +15,16 @@ pub(crate) fn execute(
     let worker = _1_resolve_runtime::resolve(&catalog, request)?;
     receipt["worker"] = serde_json::to_value(&worker.descriptor)
         .map_err(|e| Error::new("OUTPUT_JSON", e.to_string()))?;
+    // The official runtime name users see; `worker.family` stays the stable machine ID.
+    receipt["runtime"] = _1_resolve_runtime::registry::Registry::bundled()?
+        .worker_runtime_json(&worker.descriptor)?;
     let block = request.archived_block()?;
     _2_prepare_state::validate_boundary(request, &block)?;
     let original = _2_prepare_state::original_control(&request.fixture)?;
+    let prefix = original["target"]["prefixIndices"]
+        .as_array()
+        .ok_or_else(|| Error::new("INVALID_REQUEST", "prefix indices missing"))?;
+    progress::attempt(prefix.len() as u64);
     let transport = WorkerTransport::new(job).with_owner(config.owner.clone());
     let limits = WorkerLimits {
         max_input_bytes: 256 * 1024 * 1024,
@@ -111,11 +119,13 @@ pub(crate) fn execute(
             _3_verify_original::MetadataPolicy::ArchivedComputeMeterWarning
         }
     };
+    progress::phase(Phase::ReplayingEarlierTransactions);
     let control = _4_simulate::run(&transport, &worker.spec, &original, &limits, budget)?;
     receipt["phases"]
         .as_array_mut()
         .ok_or_else(|| Error::new("INTERNAL", "phase container changed"))?
         .push(json!({"phase":"original-control","process":control.process,"reads":control.reads}));
+    progress::phase(Phase::VerifyingOriginal);
     let checked = match _3_verify_original::verify(
         &request.candidate,
         &original,
@@ -140,6 +150,7 @@ pub(crate) fn execute(
         &receipt["controlVerification"],
     );
     let output = if _2_prepare_state::has_variant(&request.fixture)? {
+        progress::phase(Phase::ExecutingRequested);
         let requested =
             _4_simulate::run(&transport, &worker.spec, &request.fixture, &limits, budget)?;
         receipt["phases"]

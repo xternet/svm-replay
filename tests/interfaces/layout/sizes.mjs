@@ -9,7 +9,7 @@ const exceptions = new Map([
 
 export function lineLimit(path) {
     if (exceptions.has(path)) return exceptions.get(path);
-    return ["mod.rs", "main.rs", "lib.rs", "root.rs"].includes(basename(path)) ? 70 : 250;
+    return ["mod.rs", "main.rs", "lib.rs", "root.rs", "main.sh", "main.ps1"].includes(basename(path)) ? 70 : 250;
 }
 
 export function sizeViolation(path, source) {
@@ -25,7 +25,7 @@ export function auditSizes(root) {
             if (ignored.has(entry.name)) continue;
             const file = resolve(directory, entry.name);
             if (entry.isDirectory()) visit(file);
-            else if (/\.(rs|ts|mjs)$/.test(entry.name)) {
+            else if (/\.(rs|ts|mjs|sh|ps1)$/.test(entry.name)) {
                 const path = relative(root, file).replaceAll("\\", "/");
                 const violation = sizeViolation(path, readFileSync(file, "utf8"));
                 if (violation) violations.push(violation);

@@ -20,4 +20,6 @@ use catalog::{confined, problem};
 mod _1_resolve;
 use _1_resolve as resolve;
 
-pub use resolve::{resolve, resolve_binding, resolve_capture, validate_worker_binding};
+pub use resolve::{
+    fixture_capabilities, resolve, resolve_binding, resolve_capture, validate_worker_binding,
+};

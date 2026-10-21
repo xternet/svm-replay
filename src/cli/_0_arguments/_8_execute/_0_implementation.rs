@@ -1,7 +1,11 @@
 use super::*;
-
 pub(in super::super) fn execute(command: Command) -> Result<Value, Error> {
     match command {
+        Command::Completions { shell } => public::complete(shell),
+        Command::Fork { options } | Command::Session { options } => {
+            crate::_11_session::run(options)
+        }
+        Command::Boundary { request } => boundary::project_file(&request),
         Command::Demo {
             example,
             bundle,
@@ -134,13 +138,7 @@ pub(in super::super) fn execute(command: Command) -> Result<Value, Error> {
             } => crate::bundle::install(&bundle, &Digest::new(bundle_sha256)?, &output),
         },
         Command::Capabilities { runtime } | Command::Doctor { runtime } => {
-            let (catalog, catalog_sha256) = runtime.resolve()?;
-            let installed =
-                svm_replay_engine::_1_resolve_runtime::load_catalog(&catalog, &catalog_sha256)?;
-            Ok(
-                json!({"outcome":"COMPLETED","schema":"svm-replay-capabilities/v1","workers":installed.manifest.workers,
-                "platform":installed.manifest.platform,"captureWorkers":installed.manifest.capture_workers,"preparedReplay":true,"sourceReconstruction":true,"releaseQualified":false}),
-            )
+            public::inspect_runtime(runtime)
         }
         Command::Simulate {
             request,

@@ -5,10 +5,30 @@ environment or current-directory `.env`:
 
 ```ts
 import { Replay } from "@xternet/svm-replay";
-const replay = await Replay.installed("./svm-replay");
+const replay = await Replay.installed(); // Same activated user-level bundle as the CLI.
 const result = await replay.replay({tx: "SIGNATURE", collect: {calls: true}});
 console.log(result.response);
 ```
+
+No native bundle belongs in your application directory. `Replay.installed()` reads
+the CLI's user-level activation record; `Replay.installed("/path/to/bundle")`
+still selects an explicit installation.
+
+Bundles and `eth_call`-style state overrides: run your own transactions right after the
+target (`append`) or instead of it (`replace`), on any account state you set first. Each
+transaction gets its own result in `response.result.whatIf.transactions`.
+
+```ts
+const after = await replay.replay({
+  tx: "SIGNATURE",
+  overrides: [{pubkey: "ADDRESS", program: "@target/deploy/arb.so"},   // a program at a new address
+              {pubkey: "WALLET", lamports: "1000000000"}],             // patch one field
+  append: [{transactionBase64: "BASE64"}, {transactionBase64: "BASE64"}],
+});
+```
+
+With `owner` an override replaces the whole account; `lamports: "0"` deletes it or declares an
+account the bundle creates. [Bundles and state overrides](https://github.com/xternet/svm-replay/blob/main/docs/usage.md#bundles-and-state-overrides).
 
 Use `collect: "all"` for all bounded capture categories, or select `calls`,
 `instructions`, `registers`, and `memory` in the object. Optional filters and
@@ -69,7 +89,10 @@ request: only API_ALCHEMY is forwarded when Alchemy is selected.
 File-access failures retain OS error codes such as ENOENT; they are never converted
 to a cache miss or an empty result.
 
-Optional companions: import withHistoricalReplay, anchorSignature, anchorRequest, assertCompleted
-from '@xternet/svm-replay/adapters'. They do not use a consumer's current-state runtime
-as historical authority. See [examples](https://github.com/xternet/svm-replay/tree/main/examples)
+Optional companions: import withHistoricalReplay, anchorSignature, anchorRequest, assertCompleted,
+startHistorical and loadBoundary from '@xternet/svm-replay/adapters'. `startHistorical()` is a
+legacy account datasource, not full historical execution in Surfpool. A datasource
+does not replace Surfpool's VM. For the full route use `surfpool start --after`,
+or Anchor's generated historical helper; `Replay.forkAt()` instead owns the limited
+standalone RPC server. See [examples](https://github.com/xternet/svm-replay/tree/main/examples)
 and [integrations](https://github.com/xternet/svm-replay/blob/main/docs/integrations.md).

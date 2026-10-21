@@ -125,6 +125,12 @@ pub(crate) fn finish_sources(
 pub(in super::super) struct SharedSource(pub(in super::super) Arc<dyn HistoricalSource>);
 
 impl HistoricalSource for SharedSource {
+    fn discover_block(
+        &self,
+        slot: u64,
+    ) -> svm_replay_engine::shared::sources::Result<Option<serde_json::Value>> {
+        self.0.discover_block(slot)
+    }
     fn identity(&self) -> serde_json::Value {
         self.0.identity()
     }

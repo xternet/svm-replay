@@ -19,3 +19,6 @@ mod backward_scan_matches_exhaustive_causal;
 
 #[path = "dependencies_cases/vote_authority.rs"]
 mod vote_authority;
+
+#[path = "dependencies_cases/progress.rs"]
+mod progress;

@@ -1,14 +1,33 @@
 use super::*;
 
-pub fn run() -> Result<Value, Error> {
-    let mut args = Args::parse();
+pub fn run() -> (
+    Result<Value, Error>,
+    Option<svm_replay_engine::shared::progress::ProgressJob>,
+) {
+    use svm_replay_engine::shared::progress::{Phase, ProgressJob};
+    let mut command = help::command();
+    let matches = command.get_matches_mut();
+    let args = public::parse(matches).unwrap_or_else(|e| e.format(&mut command).exit());
+    let progress = args.progress.then(|| {
+        ProgressJob::stderr(
+            if args.signature.tx.is_some() || args.signature.after.is_some() {
+                Phase::LocatingTransaction
+            } else {
+                Phase::ResolvingDependencies
+            },
+        )
+    });
+    (run_args(args), progress)
+}
+
+fn run_args(mut args: Args) -> Result<Value, Error> {
     let debug = matches!(&args.command, Some(Command::Simulate { debug: true, .. }));
     crate::json_output::configure(args.pretty, args.json || debug);
-    if args.signature.tx.is_some() {
+    if args.signature.tx.is_some() || args.signature.after.is_some() {
         if args.command.is_some() {
             return Err(Error::new(
                 "INVALID_REQUEST",
-                "--tx cannot be combined with a subcommand",
+                "--tx/--after cannot be combined with a subcommand",
             ));
         }
         super::super::super::terminal::configure(args.human);
@@ -91,7 +110,10 @@ pub fn run() -> Result<Value, Error> {
         || (!args.json
             && !args.pretty
             && super::super::super::terminal::interactive()
-            && matches!(&command, Command::Demo { .. }));
+            && matches!(
+                &command,
+                Command::Demo { .. } | Command::Fork { .. } | Command::Session { .. }
+            ));
     super::super::super::terminal::configure(human);
     let result = execute(command);
     report_result(&result, args.bug_report);

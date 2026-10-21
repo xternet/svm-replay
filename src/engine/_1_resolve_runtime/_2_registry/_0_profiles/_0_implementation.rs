@@ -82,7 +82,10 @@ impl Registry {
     pub fn profile(&self, slot: u64) -> Result<&Profile, Error> {
         self.profiles
             .iter()
-            .find(|p| slot >= p.earliest_slot && slot <= p.latest_slot)
+            .find(|p| {
+                slot >= p.earliest_slot
+                    && (slot <= p.latest_slot || p.latest_slot == self.window.latest_slot)
+            })
             .ok_or_else(|| {
                 Error::new(
                     "UNSUPPORTED_RUNTIME",
@@ -120,6 +123,17 @@ impl Registry {
         executor["sourceEvidenceHash"] = json!(worker.source_sha256);
         executor["m9Build"] = json!({"binarySha256":worker.sha256,
             "buildHash":worker.build_hash,"capabilities":worker.capabilities});
+        if slot > self.window.latest_slot {
+            let runtime = self.runtime_name(&profile.executor_source_id)?;
+            executor["runtimeSelection"] = json!({
+                "status":"UNQUALIFIED_NEWER_SLOT", "policy":"latest-pinned-runtime",
+                "targetSlot":slot, "reviewedThroughSlot":self.window.latest_slot,
+                "warning":format!(
+                    "Slot {slot} is newer than reviewed coverage (through {}). Trying {} with last-known features. Original-result verification is still required; modified execution is not historically qualified.",
+                    self.window.latest_slot, runtime.name()
+                )
+            });
+        }
         let mut features = self
             .features
             .iter()

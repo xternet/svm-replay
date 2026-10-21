@@ -1,0 +1,24 @@
+[toolchain]
+
+[features]
+resolution = true
+skip-lint = false
+
+[programs.localnet]
+historical_probe = "2TnwUoEbP8RKeNP3uimWaW78ZEdmJwCRMRsTUmZkMRmh"
+
+[provider]
+cluster = "localnet"
+wallet = "wallet.json"
+
+[surfpool]
+online = true
+datasource_rpc_url = "http://127.0.0.1:8999"
+extra_args = ["--match-datasource"]
+
+[hooks]
+pre_test = "svm-replay fork start <SIGNATURE> --detach --exit-with $PPID --allow-new-accounts"
+post_test = "svm-replay fork stop"
+
+[scripts]
+test = "node --test tests/historical.mjs"

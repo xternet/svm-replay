@@ -11,7 +11,6 @@ pub fn derive_historical_bank_context(
     let block = field(envelope, "result")?;
     let parent = integer(field(block, "parentSlot")?)?;
     let blockhash = pubkey(field(block, "blockhash")?)?;
-    let execution = pubkey(field(block, "previousBlockhash")?)?;
     let target_slot = integer(field(selector, "slot")?)?;
     check(parent < target_slot, "parent must precede target")?;
     check(
@@ -57,63 +56,27 @@ pub fn derive_historical_bank_context(
             }
         }
     }
-    let mut witnesses = Vec::new();
-    let mut per_signature = None;
-    for (index, transaction) in transactions.iter().enumerate() {
-        let meta = field(transaction, "meta")?;
-        if !field(meta, "err")?.is_null() {
-            continue;
-        }
-        let instructions = resolve(transaction)?;
-        if instructions.len() != 1
-            || instructions[0].program != "Vote111111111111111111111111111111111111111"
-        {
-            continue;
-        }
-        let header = field(
-            field(field(transaction, "transaction")?, "message")?,
-            "header",
-        )?;
-        let signatures = integer(field(header, "numRequiredSignatures")?)?;
-        let fee = integer(field(meta, "fee")?)?;
-        check(
-            signatures > 0 && fee > 0 && fee % signatures == 0,
-            &format!("vote fee witness {index} malformed"),
-        )?;
-        let rate = fee / signatures;
-        if let Some(previous) = per_signature {
-            check(previous == rate, "vote fee witnesses disagree")?;
-        } else {
-            per_signature = Some(rate);
-        }
-        witnesses.push(FeeWitness {
-            transaction_index: index,
-            fee,
-            signatures,
-        });
-    }
-    let rate = per_signature.ok_or_else(|| fail("vote fee witnesses missing"))?;
-    let lineage = Lineage {
-        source_hash,
-        target_slot,
-        parent_slot: parent,
-        blockhash,
-        previous_blockhash: execution,
-    };
-    let lineage_hash = hash(serde_json::to_vec(&lineage).map_err(|e| fail(e.to_string()))?);
-    let witness_hash = hash(serde_json::to_vec(&witnesses).map_err(|e| fail(e.to_string()))?);
-    let witness_indices: Vec<_> = witnesses.iter().map(|w| w.transaction_index).collect();
-    let indices_hash = hash(serde_json::to_vec(&witness_indices).map_err(|e| fail(e.to_string()))?);
     let required = if nonce_uses > 0 && runtime_resolvable {
         json!([{"pubkey":RECENT,"requirement":"nonce-advance-nonempty-cache-v1"}])
     } else {
         json!([])
     };
-    let mut result = json!({"targetSlot":target_slot,"parentSlot":parent,"executionBlockhash":execution,"lamportsPerSignature":rate,
-        "sourceKind":"canonical-block-lineage-and-vote-fees-v1","blockSourceHash":source_hash,"blockLineageHash":lineage_hash,
-        "feeWitnessHash":witness_hash,"feeWitnessCount":witnesses.len(),"feeWitnessIndicesHash":indices_hash,"requiredRuntimeSysvars":required});
-    result["derivationHash"] = json!(historical_bank_context_hash(&result)?);
-    Ok(result)
+    derive_context(block, target_slot, source_hash, required)
+}
+
+/// Slot initialization derives Bank facts from block metadata, not an original
+/// transaction. No vote account image or transaction control is required.
+pub fn derive_initialized_bank_context(
+    envelope: &Value,
+    target_slot: u64,
+    source_hash: &str,
+) -> Result<Value> {
+    derive_context(
+        field(envelope, "result")?,
+        target_slot,
+        source_hash,
+        json!([]),
+    )
 }
 
 /// Bind a target block hash to the existing pinned lineage, not the parent's

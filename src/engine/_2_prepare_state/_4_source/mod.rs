@@ -41,8 +41,9 @@ mod _7_parent_keys;
 use _7_parent_keys as parent_keys;
 use parent_keys::parent_keys;
 
-mod _8_account_coverage;
-use _8_account_coverage::assert_account_coverage;
+use crate::shared::history::assert_account_coverage;
 mod _10_credit_recovery;
 mod _11_program_headers;
+mod _12_what_if;
+use _12_what_if as what_if;
 mod _9_implicit_loaders;

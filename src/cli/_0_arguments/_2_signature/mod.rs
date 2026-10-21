@@ -31,4 +31,12 @@ pub(super) use wizard::collect;
 mod _7_execution;
 use _7_execution as execution;
 
-pub(super) use execution::{run, Options};
+pub(super) use execution::run;
+mod _8_options;
+pub(super) use _8_options::Options;
+mod _9_historical;
+use _9_historical as historical;
+pub(crate) use controls::Controls as SignatureControls;
+pub(crate) use historical::Options as HistoricalOptions;
+mod _10_session;
+pub(crate) use _10_session::{prepare_session, SessionPreparation};

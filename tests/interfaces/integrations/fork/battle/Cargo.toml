@@ -1,0 +1,15 @@
+[package]
+name = "battle"
+version = "0.0.0"
+edition = "2021"
+publish = false
+description = "Battle-test program for historical forks (opt-in drivers only; never deployed to a network)"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+solana-program = "=2.3.0"
+
+# A standalone workspace: built with cargo-build-sbf, never part of the SVM Replay workspace.
+[workspace]

@@ -1,4 +1,5 @@
 use super::*;
+use crate::shared::progress::{self, Phase};
 
 pub fn execute(
     request: &PreparedRequest,
@@ -75,6 +76,11 @@ pub fn execute(
                            mode: &str|
              -> Result<Value, Error> {
                 check_options()?;
+                progress::phase(if name == "original-control" {
+                    Phase::ReplayingEarlierTransactions
+                } else {
+                    Phase::ExecutingRequested
+                });
                 let execution = context
                     .transport
                     .run(&worker.spec, fixture, flags, limits, &budget)
@@ -93,6 +99,9 @@ pub fn execute(
             };
             let original = run(reference, &reference_flags, "reference")?;
             let output = payload(&original, fixture, tracked)?;
+            if name == "original-control" {
+                progress::phase(Phase::VerifyingOriginal);
+            }
             let verification = verify(request, fixture, &block, &output)?;
             if name == "original-control" {
                 control_evidence = Some(super::super::super::control::evidence(

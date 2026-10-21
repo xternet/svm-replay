@@ -1,6 +1,6 @@
 # Validation and release status
 
-Version 0.1.0 validation evidence is recorded below. Qualification does not imply
+Version 0.1.0 validation evidence is recorded below; 0.2.0 candidate checks follow it. Qualification does not imply
 acceptance by Surfpool/Anchor.
 
 ## Final platform qualification (1 October)
@@ -197,19 +197,19 @@ including real pseudo-terminal checks for pretty stdout, compact saved files and
 terminal and with redirected output. This changes presentation, not replay logic.
 
 The collection-correctness coordinator rerun passed all 47 prepared historical targets against
-unchanged output hashes, plus memory-enabled captures on all six runtime families.
+unchanged output hashes, plus memory-enabled captures on six of the seven runtimes.
 The latter deliberately used explicit small collection limits to test labelled
 truncation. A separate six-family run also passed complete collection with no
 user-specified truncation limits:
 
 | Runtime | Memory events | Collection status |
 |---|---:|---|
-| v2-3 | 106,737 | COMPLETE |
-| v3-0 | 57,750 | COMPLETE |
-| v3-1 | 15,163 | COMPLETE |
-| v4-0 | 4,684 | COMPLETE |
-| v4-1 | 15,793 | COMPLETE |
-| v4-2 | 21,197 | COMPLETE |
+| Agave 2.3.9 | 106,737 | COMPLETE |
+| Agave 3.0.10 | 57,750 | COMPLETE |
+| Agave 3.1.11 | 15,163 | COMPLETE |
+| Agave 4.0.0 | 4,684 | COMPLETE |
+| Agave 4.1.2 | 15,793 | COMPLETE |
+| Agave 4.2.1 | 21,197 | COMPLETE |
 
 These are six selected prepared transactions, not every transaction in the archive.
 

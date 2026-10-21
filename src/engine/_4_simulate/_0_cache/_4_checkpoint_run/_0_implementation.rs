@@ -1,4 +1,5 @@
 use super::*;
+use crate::shared::progress::{self, Phase};
 
 pub(in super::super) fn checkpoint_run(
     fixture: &Value,
@@ -26,6 +27,12 @@ pub(in super::super) fn checkpoint_run(
     if let Some(hash) = expected {
         flags.push(hash.as_str().into());
     }
+    progress::phase(match phase {
+        "prefix" => Phase::ReplayingEarlierTransactions,
+        "original-control" => Phase::VerifyingOriginal,
+        "requested" => Phase::ExecutingRequested,
+        _ => return Err(Error::new("CACHE_PROTOCOL", "unknown worker phase")),
+    });
     let execution = context
         .transport
         .run_with_files(
@@ -105,5 +112,6 @@ pub(in super::super) fn checkpoint_run(
         }
     }
     totals.add(&observed.metrics)?;
+    progress::processed_earlier(observed.metrics.prefix_transactions_executed);
     Ok(observed)
 }

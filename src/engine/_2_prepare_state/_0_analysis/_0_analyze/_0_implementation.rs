@@ -29,6 +29,14 @@ pub fn analyze(input: &HistoricalRequest, envelope: &Value) -> Result<Analysis, 
     let index = input.candidate["transactionIndex"]
         .as_u64()
         .ok_or_else(|| invalid("missing target index"))?;
+    if input
+        .after_slot
+        .is_some_and(|after| parent > after || after >= slot || index != 0)
+    {
+        return Err(invalid(
+            "after-slot boundary skips a produced block or is not transaction zero",
+        ));
+    }
     let blockhash = block["blockhash"]
         .as_str()
         .ok_or_else(|| invalid("missing blockhash"))?

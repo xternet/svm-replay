@@ -39,7 +39,9 @@ use _6_requested as requested;
 
 pub use requested::assert_requested_execution_shape;
 
-use requested::{execution_behavior, nullable_object, requested_override_proof, require_trace};
+use requested::{
+    execution_behavior, nullable_object, requested_override_proof, requested_state, require_trace,
+};
 mod _7_verification;
 use _7_verification as verification;
 
@@ -48,3 +50,7 @@ mod _8_verify_with_options;
 use _8_verify_with_options as verify_with_options;
 
 pub use verify_with_options::verify_with_options;
+mod _9_what_if;
+use _9_what_if as what_if;
+
+use what_if::what_if_proof;

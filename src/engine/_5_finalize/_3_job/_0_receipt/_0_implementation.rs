@@ -26,9 +26,15 @@ pub(crate) fn begin_job(
     let request_hash = Digest::of(
         serde_json::to_vec(request).map_err(|e| Error::new("INVALID_REQUEST", e.to_string()))?,
     );
-    let receipt = json!({"schema":"svm-replay-receipt/v1","requestId":request["requestId"],"requestIdentity":request_hash,
+    let mut receipt = json!({"schema":"svm-replay-receipt/v1","requestId":request["requestId"],"requestIdentity":request_hash,
         "catalogSha256":config.catalog_sha256,"implementationSha256":coordinator.sha256,"processOwnerSha256":config.owner.sha256,"scope":scope,"currentStateFallback":false,
         "reconstructedFromSources":false,"outcome":"ERROR","phases":[],"controlVerification":null,"verification":null});
+    if let Some(selection) = request
+        .pointer("/runtimeBinding/executor/runtimeSelection")
+        .or_else(|| request.pointer("/fixture/runtime/binding/executor/runtimeSelection"))
+    {
+        receipt["runtimeSelection"] = selection.clone();
+    }
     write_json(
         &job.join("started.json"),
         &json!({"schema":"svm-replay-started/v1",
@@ -44,6 +50,7 @@ pub(crate) fn finish_job(
     job: &Path,
     started: Instant,
 ) -> Result<Value, Error> {
+    crate::shared::progress::phase(crate::shared::progress::Phase::SavingInputs);
     let result = result.and_then(|output| write_json(&job.join("result.json"), &output));
     match result {
         Ok(digest) => {

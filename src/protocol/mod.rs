@@ -12,7 +12,9 @@ pub use _4_transaction as transaction;
 pub mod _5_worker;
 pub use _5_worker as worker;
 
-pub use historical::HistoricalRequest;
+pub use historical::{
+    HistoricalRequest, StateOverride, WhatIf, WhatIfMode, MAX_BUNDLE, MAX_STATE_OVERRIDES,
+};
 pub use identity::Digest;
 pub use json::{parse_json, validate_safe_numbers};
 pub use request::{Limits, MetadataPolicy, PreparedRequest};

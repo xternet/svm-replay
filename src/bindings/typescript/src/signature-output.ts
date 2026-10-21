@@ -19,6 +19,11 @@ export async function verifySignatureOutput(full:JsonObject,receipt:Receipt,root
             const tx=expected[name];
             if(tx!==null&&typeof tx==="object"&&!Array.isArray(tx))for(const key of Object.keys(tx))if(!fields.includes(key))delete tx[key];
         }
+        const whatIf=expected.whatIf;
+        if(whatIf!==null&&typeof whatIf==="object"&&!Array.isArray(whatIf)&&Array.isArray(whatIf.transactions)){
+            for(const tx of whatIf.transactions)if(tx!==null&&typeof tx==="object"&&!Array.isArray(tx))
+                for(const key of Object.keys(tx))if(!fields.includes(key))delete tx[key];
+        }
     }
     if(!isDeepStrictEqual(full.result,expected))fail("returned result differs from verified artifact");
     const trace=full.trace;

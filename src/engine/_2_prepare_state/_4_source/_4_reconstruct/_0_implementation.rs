@@ -1,9 +1,11 @@
 use super::*;
+use crate::shared::progress::{self, Phase};
 
 pub fn reconstruct(
     input: &HistoricalRequest,
     history: &mut History<'_>,
 ) -> Result<Prepared, Error> {
+    progress::phase(Phase::ResolvingDependencies);
     input.validate()?;
     if input.genesis_hash != history.genesis
         || input.candidate["slot"].as_u64() != Some(history.target_slot)
@@ -32,36 +34,17 @@ pub fn reconstruct(
         .any(|entry| original.address_table_accounts.contains(&entry.pubkey));
     let original_wire = history.transaction(&original.signature)?;
     svm_replay_protocol::transaction::assert_historical(&original_wire, &a.raw[a.index as usize])?;
-    let requested = if input.replacement_transaction_base64.is_some() || overridden_lookup {
-        let bytes = match &input.replacement_transaction_base64 {
-            Some(bytes) => bytes,
-            None => &original_wire,
-        };
-        Some(requested::resolve_requested_dependencies(
-            bytes,
-            &a.raw[a.index as usize],
-            &a.transactions,
-            a.index,
-            a.parent,
-            history,
-            Some(&requested::RequestedBoundaryEvidence {
-                target_slot: a.slot,
-                raw_transactions: a.raw.clone(),
-            }),
-            &changes,
-        )?)
-    } else {
-        None
-    };
-    let requested_summary = match &requested {
-        Some(value) => &value.summary,
-        None => original,
-    };
-    let dependency_target = if requested.is_some() || input.requested_account_overrides.is_some() {
-        dependencies::include_requested_dependencies(original, requested_summary)?
-    } else {
-        original.clone()
-    };
+    let requested = what_if::requested_transactions(
+        input,
+        &a,
+        &original_wire,
+        overridden_lookup,
+        &changes,
+        history,
+    )?;
+    let merged = what_if::merged_summary(&requested)?;
+    let requested_summary = merged.as_ref().unwrap_or(original);
+    let dependency_target = what_if::dependency_target(input, original, merged.as_ref())?;
     let mut transactions = a.transactions.clone();
     transactions[a.index as usize] = dependency_target.clone();
     let mut migration_input = json!({"slot":a.slot,"parentSlot":a.parent,"blockSourceHash":source_hash,
@@ -91,6 +74,7 @@ pub fn reconstruct(
     })?;
     let credits = _10_credit_recovery::recover(input, &a, history, &transactions, closure)?;
     let closure = credits.closure;
+    progress::earlier_total(closure.selected_indices.len() as u64, true);
     let selected = closure
         .selected_indices
         .iter()
@@ -101,11 +85,12 @@ pub fn reconstruct(
     let mut execution = closure.selected_indices.clone();
     execution.push(a.index);
     let (requirements, runtime_resolvable, roles) =
-        runtime_requirements(&a, &execution, requested.as_ref(), &included, &closure)?;
+        runtime_requirements(&a, &execution, &requested, &included, &closure)?;
     let initialized = array(&migrations["initialized"], "migration images")?;
     let parent_keys = parent_keys(&closure, initialized, &runtime_resolvable)?;
     // Read neutral records first: lifecycle proofs determine which absent images
     // are legitimate creation inputs, before assigning required program/ALT roles.
+    progress::phase(Phase::FetchingHistoricalAccounts);
     let mut parent_records = history.accounts(&parent_keys, a.parent, &Roles::default())?;
     headers.apply(&mut parent_records)?;
     _9_implicit_loaders::include_loaders(&mut parent_records, |key| {
@@ -130,7 +115,7 @@ pub fn reconstruct(
             raw: a.raw[index as usize].clone(),
         })
         .collect::<Vec<_>>();
-    if let Some(value) = &requested {
+    for value in &requested {
         loader_evidence.push(lifecycle::IncludedTransaction {
             index: a.index,
             raw: value.raw.clone(),
@@ -155,13 +140,16 @@ pub fn reconstruct(
         &requested_summary.address_table_accounts,
         &parent,
     )?;
-    let executable = if requested.is_some() || input.requested_account_overrides.is_some() {
+    let executable = if !requested.is_empty()
+        || input.requested_account_overrides.is_some()
+        || !input.extra_accounts.is_empty()
+    {
         parent
             .iter()
             .filter(|v| {
                 v["presence"] == "present"
                     && v["executable"] == true
-                    && requested_summary
+                    && dependency_target
                         .declared_accounts
                         .iter()
                         .any(|key| v["pubkey"] == *key)
@@ -176,8 +164,15 @@ pub fn reconstruct(
     } else {
         Vec::new()
     };
-    let programs = unique(roles.programs.iter().cloned().chain(executable));
-    let inspected_images = overrides::requested_image_inspection(&parent, &changes)?;
+    let programs = unique(
+        roles
+            .programs
+            .iter()
+            .cloned()
+            .chain(executable)
+            .chain(what_if::override_programs(input)),
+    );
+    let inspected_images = what_if::inventory_images(&parent, &changes, input)?;
     let extra = unique(
         imports::dedicated_inputs(&programs, &parent)?
             .into_iter()
@@ -201,7 +196,7 @@ pub fn reconstruct(
         Some(&a.raw),
         Some(&loader_context),
     )?;
-    if let Some(value) = &requested {
+    for value in &requested {
         let mut raw = a.raw.clone();
         raw[a.index as usize] = value.raw.clone();
         lifecycle::assert_program_lifecycle_supported(

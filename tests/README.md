@@ -10,7 +10,7 @@ cargo fmt --all --check
 npm --prefix src/bindings/typescript test
 npm --prefix examples test
 npm --prefix tests ci --ignore-scripts
-bun test tests
+bun test ./tests
 ```
 
 Install dependencies first on a fresh checkout. These ordinary checks do not

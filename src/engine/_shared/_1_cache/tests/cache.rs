@@ -132,3 +132,32 @@ mod fee_ledger;
 #[path = "cache_cases/execution.rs"]
 #[cfg(target_os = "linux")]
 mod execution;
+
+#[test]
+fn what_if_reuses_the_original_checkpoint_and_keys_its_own_result() {
+    use svm_replay_engine::_2_prepare_state::{has_variant, original_control};
+    use svm_replay_engine::shared::cache::identity::checkpoint_fixture_hash;
+    let (request, worker) = identity_input();
+    let catalog = Digest::of(b"catalog");
+    let implementation = Digest::of(b"native implementation");
+    let original = derive(&request, &worker, &catalog, &implementation).expect("identity");
+    let mut after = request.clone();
+    after.fixture["whatIf"] = json!({"mode":"after","transactionsBase64":["AQ=="]});
+    let changed = derive(&after, &worker, &catalog, &implementation).expect("what-if identity");
+    assert_eq!(changed.prepared_key, original.prepared_key);
+    assert_ne!(changed.result_key, original.result_key);
+    let mut replace = after.clone();
+    replace.fixture["whatIf"]["mode"] = json!("replace");
+    let other = derive(&replace, &worker, &catalog, &implementation).expect("other identity");
+    assert_ne!(other.result_key, changed.result_key);
+    assert_eq!(
+        checkpoint_fixture_hash(&after.fixture).unwrap(),
+        checkpoint_fixture_hash(&request.fixture).unwrap()
+    );
+    assert!(has_variant(&after.fixture).unwrap());
+    assert!(!has_variant(&request.fixture).unwrap());
+    assert!(original_control(&after.fixture)
+        .unwrap()
+        .get("whatIf")
+        .is_none());
+}

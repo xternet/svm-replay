@@ -8,6 +8,7 @@ pub(crate) fn record_sources(
     job: &Path,
     receipt: &mut Value,
 ) -> Result<Value, Error> {
+    crate::shared::progress::phase(crate::shared::progress::Phase::SavingInputs);
     let observations = json!(history.sources.observations());
     receipt["sourceDiagnostics"] = match history.sources.diagnostics() {
         Ok(value) => value,
@@ -18,6 +19,7 @@ pub(crate) fn record_sources(
             receipt["sourceObservations"] =
                 json!({"file":"source-observations.json","sha256":hash});
             result
+                .map_err(|error| crate::shared::sources::attribute_failure(error, history.sources))
         }
         Err(error) => Err(error.with_details(json!({"primaryError":result.err()}))),
     }

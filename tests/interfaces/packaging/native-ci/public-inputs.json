@@ -1,0 +1,47 @@
+{
+  "schema": "svm-replay-native-ci-inputs/v1",
+  "assets": [
+    {
+      "file": "qualification.tar.gz",
+      "url": "https://github.com/xternet/svm-replay/releases/download/validation-inputs-0.2.0/qualification.tar.gz",
+      "sha256": "1db5088f37adfa27d88f2cbc9ffcd6bb27de6758ef06d20933a159de53fa4f40",
+      "bytes": 95518199
+    },
+    {
+      "file": "worker-sources.tar.gz",
+      "url": "https://github.com/xternet/svm-replay/releases/download/validation-inputs-0.2.0/worker-sources.tar.gz",
+      "sha256": "b615108fa5f92122920577a6050ea74f658e3a9c98a4f259b03f94dc68f6487d",
+      "bytes": 26971379
+    },
+    {
+      "file": "original-catalog.json",
+      "url": "https://github.com/xternet/svm-replay/releases/download/validation-inputs-0.2.0/original-catalog.json",
+      "sha256": "251e94d328746575f2eec56901b934412179512b9e9ea6bf4c39cd4570df41b0",
+      "bytes": 6785
+    },
+    {
+      "file": "qualified-catalog.json",
+      "url": "https://github.com/xternet/svm-replay/releases/download/validation-inputs-0.2.0/qualified-catalog.json",
+      "sha256": "ac9ccd817974eebfd8dd178cd0b96310e8309dc5b8e19c480d381944de6d69a0",
+      "bytes": 10225
+    },
+    {
+      "file": "session-inputs.tar.gz",
+      "url": "https://github.com/xternet/svm-replay/releases/download/validation-inputs-0.2.0/session-inputs.tar.gz",
+      "sha256": "276d94864d61063d5a1651dd8564081068c66847b89b8f863657f69c61edf2a3",
+      "bytes": 9099585
+    },
+    {
+      "file": "coordinator-licenses.tar.gz",
+      "url": "https://github.com/xternet/svm-replay/releases/download/validation-inputs-0.2.0/coordinator-licenses.tar.gz",
+      "sha256": "ed5206f8c40f3b781bdf210b14998c100755074e8bbeac588f79e238abe37818",
+      "bytes": 52115
+    },
+    {
+      "file": "public-selection.json",
+      "url": "https://github.com/xternet/svm-replay/releases/download/validation-inputs-0.2.0/public-selection.json",
+      "sha256": "374b77bc4a01bfebe20b3419a8dc5bbe64b613a11361241030b48ef5569f4d29",
+      "bytes": 2388
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+# Copy into an ordinary Anchor application (no [historical] configuration).
+# The isolated runner supplies matching reviewed tools, Node and the SBF toolchain.
+name: Anchor normal
+on: workflow_dispatch
+permissions:
+  contents: read
+jobs:
+  normal:
+    runs-on: [self-hosted, linux, x64, svm-replay-integration]
+    timeout-minutes: 30
+    env:
+      ANCHOR_SHA256: ${{ vars.ANCHOR_SHA256 }}
+      SURFPOOL_SHA256: ${{ vars.SURFPOOL_SHA256 }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Verify reviewed tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${ANCHOR_SHA256:?Set the reviewed Anchor binary hash}"
+          : "${SURFPOOL_SHA256:?Set the reviewed Surfpool binary hash}"
+          printf '%s  %s\n' "$ANCHOR_SHA256" "$(command -v anchor)" \
+            "$SURFPOOL_SHA256" "$(command -v surfpool)" | sha256sum --check -
+      - run: npm ci --ignore-scripts
+      - run: anchor build --arch v0
+      - name: Ordinary validator, deployment and application tests
+        run: anchor test --skip-build

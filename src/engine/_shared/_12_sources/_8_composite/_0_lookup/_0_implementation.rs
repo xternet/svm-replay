@@ -2,7 +2,7 @@ use super::*;
 
 /// Resolves every covering source, rejecting disagreement rather than preferring one.
 pub struct CompositeSource {
-    pub(in super::super::super) sources: Vec<(Box<dyn HistoricalSource>, Value)>,
+    pub(in super::super::super) sources: Vec<(std::sync::Arc<dyn HistoricalSource>, Value)>,
     pub(in super::super::super) recorded: Vec<Value>,
     pub(in super::super::super) discovery_artifacts: Option<PathBuf>,
 }
@@ -30,7 +30,7 @@ impl CompositeSource {
                 text(&identity["version"], "INVALID_SOURCE", "source version")?
             );
             identities.insert(id);
-            saved.push((source, identity));
+            saved.push((std::sync::Arc::from(source), identity));
         }
         require(
             networks.len() == 1,
@@ -50,6 +50,15 @@ impl CompositeSource {
     }
     pub fn observations(&self) -> Vec<Value> {
         self.recorded.clone()
+    }
+    /// Independent evidence journal sharing the SAME provider/cache instances,
+    /// including their cumulative budgets and original acquisition deadlines.
+    pub fn fresh_journal(&self) -> Self {
+        Self {
+            sources: self.sources.clone(),
+            recorded: Vec::new(),
+            discovery_artifacts: None,
+        }
     }
     pub fn diagnostics(&self) -> Result<Value> {
         let mut sources = Vec::new();

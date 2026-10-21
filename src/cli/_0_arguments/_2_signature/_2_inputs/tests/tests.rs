@@ -12,8 +12,8 @@ fn inline_and_absolute_file_json_match_and_bad_inputs_reject() {
     assert!(overrides("{}").is_err());
     assert!(overrides("[]").is_err());
     assert!(overrides("@").is_err());
-    assert!(replacement(r#"{"transactionBase64":"invalid"}"#).is_err());
-    assert!(replacement(r#"{"transactionBase64":"","extra":1}"#).is_err());
+    assert!(bundle(r#"{"transactionBase64":"invalid"}"#).is_err());
+    assert!(bundle(r#"{"transactionBase64":"","extra":1}"#).is_err());
     let trace = collect(r#"{"calls":true}"#).unwrap().unwrap();
     assert_eq!(
         trace.capture.execution_mode,

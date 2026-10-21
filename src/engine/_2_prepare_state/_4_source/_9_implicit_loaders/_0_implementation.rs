@@ -29,7 +29,8 @@ pub(in super::super) fn include_loaders(
             return Err(Error::new(
                 "UNSUPPORTED_HISTORICAL_ACCOUNT",
                 format!("exact historical implicit loader account required: {owner}"),
-            ));
+            )
+            .with_details(json!({"pubkey":owner})));
         }
     }
     Ok(())

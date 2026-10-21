@@ -8,6 +8,14 @@ import { execFileSync } from "node:child_process";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 const read = file => readFileSync(resolve(root, file), "utf8");
+const hasNodeSdkTestStep = workflow => workflow.split(/\n {6}- /).some(step =>
+    /\n {8}working-directory: src\/bindings\/typescript\n/.test(step) &&
+    /\n {8}run: npm test\n|\n {10}npm test\n/.test(step));
+
+test("SDK guard cannot borrow npm test from an unrelated later step", () => {
+    const wrong = "      - name: SDK install\n        working-directory: src/bindings/typescript\n        run: npm ci\n      - name: Unrelated suite\n        run: npm test\n";
+    assert.equal(hasNodeSdkTestStep(wrong), false);
+});
 
 test("Git ignores nested credentials but includes the documented environment template", () => {
     const directory = mkdtempSync(join(tmpdir(), "svm-replay-ignore-"));
@@ -61,4 +69,13 @@ test("SDK PR checks cover Linux, macOS and Windows without private inputs", () =
         assert.ok(portable.includes(`run: ${command}\n`),
             `${command} needs a separate step so PowerShell cannot hide its exit code`);
     }
+});
+
+test("Bun runs cross-component tests by directory while Node owns the SDK tests", () => {
+    const workflow = read(".github/workflows/ci.yml");
+    assert.match(workflow, /bun test \.\/tests\b/,
+        "Bun treats bare tests as a repository-wide path filter, including Node-only SDK tests");
+    assert.match(read("tests/README.md"), /bun test \.\/tests\b/);
+    assert.ok(hasNodeSdkTestStep(workflow),
+        "the entire Node SDK suite must remain a separate Node job");
 });

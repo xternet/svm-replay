@@ -15,4 +15,5 @@ mod tests;
 
 mod _0_implementation;
 
-pub(super) use _0_implementation::{remaining, Controls};
+pub(super) use _0_implementation::remaining;
+pub(crate) use _0_implementation::Controls;

@@ -1,37 +1,42 @@
 use super::*;
+use crate::arguments::help;
 
 #[derive(Args, Default)]
-pub(in super::super) struct Controls {
-    /// Explicit provider coverage and budgets JSON (same contract as simulate --alchemy).
-    #[arg(long, requires = "tx", conflicts_with_all = ["max_requests", "max_download_bytes"])]
+pub(crate) struct Controls {
+    /// Provider coverage and budgets as JSON (not with --max-requests or --max-download-bytes).
+    #[arg(long, value_name = "FILE", help_heading = help::PROVIDER, requires = "replay_target", conflicts_with_all = ["max_requests", "max_download_bytes"])]
     pub alchemy_config: Option<PathBuf>,
-    /// Collect all, JSON or @file: calls, instructions, registers, memory and optional limits.
-    #[arg(long, requires = "tx")]
+    /// Also record a trace: all, or JSON/@FILE choosing calls, instructions, registers, memory.
+    #[arg(long, value_name = "WHAT", help_heading = help::OUTPUT, requires = "replay_target",
+        long_help = "Also record a trace: all, or JSON/@FILE choosing calls, instructions, registers,\n\
+                     memory and optional limits (see docs/tracing.md).")]
     pub collect: Option<String>,
-    /// Total acquisition/execution deadline in seconds (default 900, maximum 3600).
-    #[arg(long, requires = "tx")]
+    /// Stop after this many seconds (default 900, at most 3600).
+    #[arg(long, value_name = "SECONDS", help_heading = help::LIMITS, requires = "replay_target")]
     pub timeout: Option<u64>,
-    /// Maximum live RPC requests, including discovery (default 5000).
-    #[arg(long, requires = "tx")]
+    /// At most this many live provider requests, discovery included (default 5000).
+    #[arg(long, value_name = "N", help_heading = help::LIMITS, requires = "replay_target")]
     pub max_requests: Option<u64>,
-    /// Maximum downloaded bytes (default 536870912).
-    #[arg(long, requires = "tx")]
+    /// At most this many downloaded bytes (default 536870912, 512 MiB).
+    #[arg(long, value_name = "BYTES", help_heading = help::LIMITS, requires = "replay_target")]
     pub max_download_bytes: Option<u64>,
-    /// Maximum worker result bytes (default 268435456).
-    #[arg(long, requires = "tx")]
+    /// At most this many result bytes (default 268435456, 256 MiB).
+    #[arg(long, value_name = "BYTES", help_heading = help::LIMITS, requires = "replay_target")]
     pub max_output_bytes: Option<u64>,
-    /// Bank evidence name in --source. Repeat for additional exact inputs.
-    #[arg(long, requires_all = ["tx", "source"], value_parser = ["initializedStakeEvidence", "epochStakeEvidence", "initializationEvidence", "programMigrationEvidence"])]
+    /// Bank evidence to take from --source (repeatable).
+    #[arg(long, value_name = "NAME", help_heading = help::PINNED, requires_all = ["replay_target", "source"], value_parser = ["initializedStakeEvidence", "epochStakeEvidence", "initializationEvidence", "programMigrationEvidence"])]
     pub bank_input: Vec<String>,
-    /// Additional captured historical source, never current-state fallback.
-    #[arg(long, requires_all = ["tx", "source_sha256"])]
+    /// Extra captured historical source (with --source-sha256); never today's state.
+    #[arg(long, value_name = "FILE", help_heading = help::PINNED, requires_all = ["replay_target", "source_sha256"])]
     pub source: Option<PathBuf>,
-    #[arg(long, requires = "source")]
+    /// Trusted SHA-256 of --source.
+    #[arg(long, value_name = "SHA256", help_heading = help::PINNED, requires = "source")]
     pub source_sha256: Option<String>,
-    /// Reviewed runtime registry JSON. Requires its independently trusted SHA256.
-    #[arg(long, requires_all = ["tx", "runtime_registry_sha256"])]
+    /// Reviewed runtime registry (with --runtime-registry-sha256).
+    #[arg(long, value_name = "FILE", help_heading = help::PINNED, requires_all = ["replay_target", "runtime_registry_sha256"])]
     pub runtime_registry: Option<PathBuf>,
-    #[arg(long, requires = "runtime_registry")]
+    /// Trusted SHA-256 of --runtime-registry.
+    #[arg(long, value_name = "SHA256", help_heading = help::PINNED, requires = "runtime_registry")]
     pub runtime_registry_sha256: Option<String>,
 }
 impl Controls {

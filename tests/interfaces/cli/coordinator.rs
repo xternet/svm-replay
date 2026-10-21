@@ -192,3 +192,56 @@ fn public_job_uses_actual_host_not_distinct_owner_for_cache_and_trace_identity()
         "TRUNCATED"
     );
 }
+
+#[test]
+fn native_cached_progress_reports_measured_execution_and_preserves_receipts() {
+    let root = tempfile::tempdir().unwrap();
+    let (request, config, _) = setup(root.path());
+    let path = root.path().join("request.json");
+    fs::write(&path, serde_json::to_vec(&request).unwrap()).unwrap();
+    for cached in [false, true] {
+        let output = std::process::Command::new(env!("CARGO_BIN_EXE_svm-replay"))
+            .args(["simulate", "--progress", "--cache", "all", "--request"])
+            .arg(&path)
+            .arg("--catalog")
+            .arg(&config.catalog_path)
+            .arg("--catalog-sha256")
+            .arg(config.catalog_sha256.as_str())
+            .arg("--data-dir")
+            .arg(&config.data_dir)
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stdout)
+        );
+        let receipt: Value = serde_json::from_slice(&output.stdout).unwrap();
+        assert_eq!(receipt["cache"]["resultCacheHit"], cached);
+        assert_eq!(receipt["controlVerification"]["status"], "PASS");
+        assert_eq!(receipt["verification"]["status"], "PASS");
+        let events: Vec<Value> = String::from_utf8(output.stderr)
+            .unwrap()
+            .lines()
+            .map(|line| serde_json::from_str(line).unwrap())
+            .collect();
+        let final_event = events.last().unwrap();
+        let count = request.fixture["target"]["prefixIndices"]
+            .as_array()
+            .unwrap()
+            .len();
+        assert_eq!(final_event["outcome"], "COMPLETED");
+        assert_eq!(final_event["earlierTransactionsTotal"]["value"], count);
+        assert_eq!(final_event["earlierTransactionsTotal"]["status"], "final");
+        assert_eq!(
+            final_event["processedEarlierTransactions"],
+            if cached { 0 } else { count }
+        );
+        if cached {
+            assert_eq!(final_event["cacheHits"], 1);
+        }
+        assert_eq!(events.iter().filter(|e| e["kind"] == "terminal").count(), 1);
+        assert!(events.iter().any(|e| e["phase"] == "verifying_original"));
+        assert_eq!(final_event["phase"], "saving_inputs");
+    }
+}

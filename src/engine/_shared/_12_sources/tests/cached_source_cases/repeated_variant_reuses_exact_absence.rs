@@ -2,6 +2,12 @@ use super::*;
 
 #[test]
 fn repeated_variant_reuses_exact_absence_and_expanded_dependency_fetches_only_missing() {
+    let events = Arc::new(Mutex::new(Vec::new()));
+    let copy = events.clone();
+    let progress = svm_replay_engine::shared::progress::ProgressJob::start(
+        svm_replay_engine::shared::progress::Phase::FetchingHistoricalAccounts,
+        Arc::new(move |event| copy.lock().unwrap().push(event)),
+    );
     let dir = tempfile::tempdir().unwrap();
     let store = Arc::new(Mutex::new(Store::open(dir.path()).unwrap()));
     let source = Source::new();
@@ -28,6 +34,12 @@ fn repeated_variant_reuses_exact_absence_and_expanded_dependency_fetches_only_mi
     .unwrap();
     assert_eq!(reopened.inspect(&query(2)).unwrap().unwrap(), original);
     assert_eq!(source.reads.load(Ordering::SeqCst), 2);
+    progress.finish("COMPLETED");
+    let progress_events = events.lock().unwrap();
+    let event = progress_events.last().unwrap();
+    assert_eq!(event.cache_hits, Some(2));
+    assert_eq!(event.fetched_accounts, None);
+    assert_eq!(event.processed_earlier_transactions, None);
     let isolated = CachedSource::new(source.clone(), store, scope("run-b", false)).unwrap();
     isolated.inspect(&query(2)).unwrap();
     assert_eq!(source.reads.load(Ordering::SeqCst), 3);

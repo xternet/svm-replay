@@ -1,4 +1,5 @@
 use super::*;
+use crate::shared::progress::{self, Phase};
 
 pub(in super::super) fn execute_inner(
     request: &PreparedRequest,
@@ -59,6 +60,8 @@ pub(in super::super) fn execute_inner(
                         ));
                     }
                 }
+                progress::processed_earlier(0);
+                progress::phase(Phase::VerifyingOriginal);
                 let control_verification = verify(request, &canonical, &block, control_output)?;
                 control_evidence = Some(super::super::super::control::evidence(
                     &canonical,
@@ -124,6 +127,7 @@ pub(in super::super) fn execute_inner(
         };
         let checkpoint = match cached {
             Some(bytes) => {
+                progress::processed_earlier(0);
                 if bytes.len() > limits.max_output_bytes {
                     return Err(Error::new(
                         "WORKER_OUTPUTLIMIT",

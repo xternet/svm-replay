@@ -18,7 +18,15 @@ pub(in super::super) fn recover(
             proofs: vec![],
         });
     }
-    let parents = history.accounts(&initial.dependency_accounts, a.parent, &Roles::default())?;
+    // Bank-owned sysvars cannot be credit-preloaded. The ordinary parent
+    // pipeline acquires their images or applies its guarded runtime proof.
+    let keys = initial
+        .dependency_accounts
+        .iter()
+        .filter(|key| ![CLOCK, INSTRUCTIONS, RECENT_BLOCKHASHES].contains(&key.as_str()))
+        .cloned()
+        .collect::<Vec<_>>();
+    let parents = history.accounts(&keys, a.parent, &Roles::default())?;
     match assert_account_coverage(&parents, &a.raw[..=a.index as usize], a.parent) {
         Ok(()) => {
             return Ok(CreditPlan {

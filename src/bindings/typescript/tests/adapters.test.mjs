@@ -16,6 +16,12 @@ test("Anchor serialization is offline and preserves exact bytes",()=>{
         {serialize(options){assert.deepEqual(options,{requireAllSignatures:false,verifySignatures:false});called++;return bytes;}});
     assert.deepEqual(Buffer.from(request.replacementTransactionBase64,"base64"),Buffer.from(bytes));assert.equal(called,1);
 });
+test("Surfpool code-level forkAt delegates boundary selection to the native replay client",async()=>{
+    const calls=[],options={after:"slot:123",provider:"alchemy"},session={url:"http://127.0.0.1:8999"};
+    const client=withHistoricalReplay({}, {forkAt:async value=>{calls.push(value);return session;}});
+    assert.equal(await client.forkAt(options),session);assert.deepEqual(calls,[options]);
+    assert.throws(()=>withHistoricalReplay({forkAt(){}},{}),error=>error.code==="ADAPTER_CONFLICT");
+});
 test("CI does not count a guarded failure as a completed simulation",()=>{
     for(const outcome of ["NEEDS_INPUT","UNSUPPORTED","MISMATCH","CANCELLED","TIMEOUT","ERROR"])
         assert.throws(()=>assertCompleted({receipt:{outcome}}),e=>e.code==="REPLAY_NOT_COMPLETED");

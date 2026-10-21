@@ -1,18 +1,9 @@
 // Local command activation only. No downloads, credentials or shell-profile edits.
 import {mkdir,readFile,lstat,writeFile,rename,unlink} from "node:fs/promises";
-import {homedir} from "node:os";
 import {join,resolve,dirname} from "node:path";
 import {createHash,randomUUID} from "node:crypto";
-export function activationPath(env=process.env,platform=process.platform){
-    let base;
-    if(platform==="win32"){
-        if(!env.LOCALAPPDATA)throw new Error("LOCALAPPDATA is required");
-        base=env.LOCALAPPDATA;
-    }else if(platform==="darwin")base=join(homedir(),"Library","Application Support");
-    else if(platform==="linux")base=env.XDG_DATA_HOME||join(homedir(),".local","share");
-    else throw new Error("unsupported platform");
-    return join(base,"svm-replay","command.json");
-}
+import {activationPath} from "./dist/activation.js";
+export {activationPath};
 async function bounded(path,max){
     if((await lstat(path)).size>max)throw new Error("installation metadata exceeds bound");
     const bytes=await readFile(path);if(bytes.length>max)throw new Error("installation metadata grew beyond bound");return bytes;

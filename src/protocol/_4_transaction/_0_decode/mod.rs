@@ -6,4 +6,4 @@ pub use _0_implementation::{assert_historical, decode};
 pub(super) use _0_implementation::{invalid, Reader};
 
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;

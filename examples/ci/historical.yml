@@ -1,0 +1,42 @@
+# Copy into a historical Anchor application, not the SVM Replay repository.
+# The labelled runner must already have reviewed matching integration builds,
+# the native SVM Replay bundle, Node, and the program's build toolchain.
+# This does not install unpublished tools or silently substitute stock releases.
+name: historical
+on: workflow_dispatch
+permissions:
+  contents: read
+jobs:
+  historical:
+    runs-on: [self-hosted, linux, x64, svm-replay-historical]
+    timeout-minutes: 30
+    env:
+      ANCHOR_SHA256: ${{ vars.ANCHOR_SHA256 }}
+      SURFPOOL_SHA256: ${{ vars.SURFPOOL_SHA256 }}
+      SVM_REPLAY_SHA256: ${{ vars.SVM_REPLAY_SHA256 }}
+      ANCHOR_BUILD_SBF_ARCH: v0
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Verify reviewed tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${ANCHOR_SHA256:?Set the reviewed integration binary hash}"
+          : "${SURFPOOL_SHA256:?Set the reviewed integration binary hash}"
+          : "${SVM_REPLAY_SHA256:?Set the reviewed native CLI hash}"
+          printf '%s  %s\n' "$ANCHOR_SHA256" "$(command -v anchor)" | sha256sum --check -
+          printf '%s  %s\n' "$SURFPOOL_SHA256" "$(command -v surfpool)" | sha256sum --check -
+          printf '%s  %s\n' "$SVM_REPLAY_SHA256" "$(command -v svm-replay)" | sha256sum --check -
+          svm-replay doctor
+          surfpool start --help | grep -q -- --after
+          anchor init --help | grep -q -- --historical
+      - name: Install application dependencies
+        run: npm ci --ignore-scripts
+      - name: Run test-owned historical forks
+        env:
+          API_ALCHEMY: ${{ secrets.API_ALCHEMY }}
+        # Configure [historical] in Anchor.toml; each test chooses its boundary.
+        # Reviewed test code can acquire paid provider data. Use an isolated
+        # account and provider-side quota; timeout-minutes is not a spend cap.
+        # No mainnet transactions are sent by the historical fork itself.
+        run: anchor test --skip-deploy

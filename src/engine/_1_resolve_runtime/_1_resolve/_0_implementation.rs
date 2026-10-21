@@ -9,7 +9,7 @@ pub fn resolve(
         .pointer("/runtime/binding")
         .ok_or_else(|| problem("WORKER_IDENTITY", "missing runtime binding"))?;
     let worker = resolve_binding(catalog, &request.family, &request.candidate, binding)?;
-    data_only_capability(&request.fixture, &worker.descriptor.capabilities)?;
+    fixture_capabilities(&request.fixture, &worker.descriptor.capabilities)?;
     Ok(worker)
 }
 
@@ -44,7 +44,7 @@ pub fn validate_worker_binding(
         .pointer("/runtime/binding")
         .ok_or_else(|| problem("WORKER_IDENTITY", "missing runtime binding"))?;
     validate_binding(&request.family, &request.candidate, binding, worker)?;
-    data_only_capability(&request.fixture, &worker.capabilities)
+    fixture_capabilities(&request.fixture, &worker.capabilities)
 }
 
 pub(in super::super) fn validate_binding(
@@ -138,7 +138,13 @@ pub fn resolve_capture(
             "capture role no longer matches baseline",
         ));
     }
-    data_only_capability(&request.fixture, &role.worker.capabilities)?;
+    if request.fixture.get("whatIf").is_some() {
+        return Err(problem(
+            "TRACE_UNSUPPORTED_VARIANT",
+            "--collect and debugging do not support bundles or state overrides yet",
+        ));
+    }
+    fixture_capabilities(&request.fixture, &role.worker.capabilities)?;
     Ok(ResolvedCaptureWorker {
         worker: ResolvedWorker {
             descriptor: role.worker.clone(),
@@ -152,10 +158,17 @@ pub fn resolve_capture(
     })
 }
 
-pub(super) fn data_only_capability(
+/// Inputs that only some installed workers understand must name a worker that declares them.
+pub fn fixture_capabilities(
     fixture: &serde_json::Value,
     capabilities: &[String],
 ) -> Result<(), Error> {
+    if fixture.get("whatIf").is_some() && !capabilities.iter().any(|c| c == "what-if-bundle/v1") {
+        return Err(problem(
+            "UNSUPPORTED_RUNTIME_CAPABILITY",
+            "bundles and state overrides need a runtime worker with what-if-bundle/v1 (SVM Replay 0.2.0 or later)",
+        ));
+    }
     if fixture["runtime"].get("slotHashesData").is_some()
         && !capabilities
             .iter()

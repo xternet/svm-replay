@@ -218,6 +218,9 @@ pub fn verify_with_options(
         assert_requested_execution_shape(requested)?;
         basis["requestedOverrides"] = requested_override_proof(fixture, requested)?;
     }
+    if let Some(proof) = what_if_proof(fixture, output, trace_required)? {
+        basis["whatIf"] = proof;
+    }
     if !fee_rewards.is_empty() {
         basis["endSlotFeeRewards"] = json!(fee_rewards);
     }

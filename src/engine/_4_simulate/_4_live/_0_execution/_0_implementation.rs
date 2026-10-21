@@ -55,6 +55,9 @@ pub fn debug_prepared(
         receipt["preparedRequest"] = json!({"file":"prepared-request.json","sha256":prepared_hash});
         receipt["worker"] = serde_json::to_value(&reference.descriptor)
             .map_err(|e| Error::new("OUTPUT_JSON", e.to_string()))?;
+        // The official runtime name users see; `worker.family` stays the stable machine ID.
+        receipt["runtime"] = _1_resolve_runtime::registry::Registry::bundled()?
+            .worker_runtime_json(&reference.descriptor)?;
         receipt["cache"] = json!({"status":"BYPASSED_FOR_LIVE_DEBUG","newExecution":true});
         let transport = WorkerTransport::new(&job).with_owner(config.owner.clone());
         let limits = WorkerLimits {

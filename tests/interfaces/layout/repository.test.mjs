@@ -9,6 +9,15 @@ import { auditHierarchy, componentName, leafName, looseRoutingFiles } from "./hi
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 const ignored = new Set([".git", "target", "node_modules", "dist", ".svm-replay"]);
+test("fork binding delegates historical state to the native engine and keeps its launcher thin", () => {
+    const binding = resolve(root, "src/bindings/typescript");
+    assert.ok(!existsSync(resolve(binding, "src/adapters/fork/expand.ts")), "historical expansion belongs in Rust");
+    assert.ok(!existsSync(resolve(binding, "src/adapters/fork/features.ts")), "historical feature derivation belongs in Rust");
+    assert.ok(readFileSync(resolve(binding, "fork.mjs"), "utf8").trimEnd().split("\n").length <= 50);
+    const boundary = readFileSync(resolve(binding, "src/adapters/fork/boundary.ts"), "utf8");
+    assert.doesNotMatch(boundary, /function (loadedKeys|touchedEarlier|snapshot|firstUse|parentImages|footprintTransaction)/);
+    assert.match(boundary, /projectBoundary/);
+});
 test("recursive guard rejects unnumbered, missing-entry and duplicate-step modules", () => {
     const fixture = mkdtempSync(resolve(tmpdir(), "svm-layout-"));
     try {
@@ -107,15 +116,15 @@ test("repository roots stay grouped by responsibility", () => {
     assert.ok(!existsSync(resolve(root, "src/cli/mod.rs")), "CLI has one entry: main.rs");
     entries(".", [".gitignore", ".github", "AGENTS.md", "CONTRIBUTING.md", "README.md",
         "LICENSE", "NOTICE", "CHANGELOG.md", "SECURITY.md", "Cargo.toml", "Cargo.lock", "rust-toolchain.toml",
-        "src", "examples", "tests", "docs"]);
-    entries("src", ["cli", "engine", "protocol", "store", "bindings"]);
-    entries("src/cli", ["main.rs", "tests.rs", "tests", "_0_arguments", "_1_bundle", "_2_debugger", "_3_demo", "_4_lifecycle", "_5_report", "_6_request", "_7_sources", "_8_terminal", "_9_json", "_10_run"]);
+        "src", "examples", "tests", "docs", "install.sh", "install.ps1"]);
+    entries("src", ["cli", "engine", "protocol", "store", "bindings", "installer"]);
+    entries("src/cli", ["main.rs", "tests.rs", "tests", "_0_arguments", "_1_bundle", "_2_debugger", "_3_demo", "_4_lifecycle", "_5_report", "_6_request", "_7_sources", "_8_terminal", "_9_json", "_10_run", "_11_session"]);
     entries("src/bindings", ["typescript"]);
     entries("tests", ["README.md", "package.json", "package-lock.json", "harness", "historical", "overrides", "cache", "tracing", "debugging", "interfaces"]);
     entries("tests/interfaces", ["README.md", "cli", "sdk", "integrations", "packaging", "layout"]);
     entries("examples", ["README.md", "package.json", "package-lock.json", "shared", "config", "historical", "surfpool", "anchor", "rust", "ci"]);
     entries("src/engine", ["Cargo.toml", "LICENSE", "NOTICE", "mod.rs", "_6_workflow", "_shared", "tests.rs", "tests", "_0_validate", "_1_resolve_runtime", "_2_prepare_state", "_3_verify_original", "_4_simulate", "_5_finalize"]);
-    entries("docs", ["architecture.md", "capabilities.md", "installation.md", "integrations.md", "limitations.md", "usage.md", "providers.md", "tracing.md", "validation.md"]);
+    entries("docs", ["architecture.md", "capabilities.md", "installation.md", "integrations.md", "tool-integration.md", "limitations.md", "usage.md", "providers.md", "runtimes.md", "tracing.md", "validation.md", "why-svm-replay.md"]);
 });
 
 test("every example has an entry point and local instructions", () => {
@@ -138,7 +147,16 @@ test("Cargo discovers every interface Rust test and the Rust example", () => {
             discovered.add(resolve(dirname(owner), child));
         }
     }
-    for (const path of files(resolve(root, "tests/interfaces")).filter(path => path.endsWith(".rs"))) {
+    // A standalone Cargo package (its own [workspace]), such as an on-chain program an opt-in driver builds with
+    // cargo-build-sbf, is not a Rust test of this workspace.
+    const standalone = path => {
+        for (let directory = dirname(path); directory.startsWith(resolve(root, "tests/interfaces")); directory = dirname(directory)) {
+            const manifest = resolve(directory, "Cargo.toml");
+            if (existsSync(manifest) && /^\[workspace\]$/m.test(readFileSync(manifest, "utf8"))) return true;
+        }
+        return false;
+    };
+    for (const path of files(resolve(root, "tests/interfaces")).filter(path => path.endsWith(".rs") && !standalone(path))) {
         assert.ok(discovered.has(path), `unregistered Rust test ${path}`);
     }
     assert.ok(paths.includes("examples/rust/main.rs"));

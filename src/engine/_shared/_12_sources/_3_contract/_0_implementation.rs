@@ -41,6 +41,11 @@ pub trait HistoricalSource: Send + Sync {
     fn discover_block(&self, _slot: u64) -> Result<Option<Value>> {
         Ok(None)
     }
+    /// Optional finalized archive read (a transaction, an address's signatures, a slot range's
+    /// blocks): its pinned JSON-RPC result, or None when this source reads no archive.
+    fn archive(&self, _query: &Value) -> Result<Option<Value>> {
+        Ok(None)
+    }
     /// Counters are instance-cumulative snapshots, never inferred from retained bytes.
     fn diagnostics(&self) -> Result<Value> {
         Ok(json!({"status":"NOT_REPORTED"}))

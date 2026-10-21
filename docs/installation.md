@@ -1,11 +1,59 @@
 # Local installation
 
-For version 0.1.0, select a native bundle from the
-[GitHub release](https://github.com/xternet/svm-replay/releases/tag/v0.1.0)
+For version 0.2.0, select a native bundle from the
+[GitHub release](https://github.com/xternet/svm-replay/releases/tag/v0.2.0)
 matching your OS and architecture; [qualification status](validation.md) is separate
 from implementation support. Worker binaries are reviewed/pinned separately from the coordinator.
 Rust callers can use the published crates or workspace path dependencies. Owned packages
 include the Apache-2.0 license and project notice.
+
+## One-command native installation
+
+After version 0.2.0 is published, Linux/macOS:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/xternet/svm-replay/v0.2.0/install.sh | sh
+export PATH="$HOME/.local/bin:$PATH"
+svm-replay demo
+```
+
+Windows, in PowerShell:
+
+```powershell
+& ([scriptblock]::Create((Invoke-WebRequest -UseBasicParsing https://raw.githubusercontent.com/xternet/svm-replay/v0.2.0/install.ps1).Content))
+$env:PATH = "$env:LOCALAPPDATA\svm-replay\bin;$env:PATH"
+svm-replay demo
+```
+
+These version-pinned URLs are not live until publication. No Node.js or Rust compiler
+is required. The scripts need `tar`; Unix also needs `curl` and `sha256sum` or `shasum`.
+They select the native OS/CPU archive, verify it against the release's `SHA256SUMS`,
+reject unsafe archive entries, and delegate bundle/worker verification to the native CLI.
+Source and license notices are preserved. Existing destinations or commands are refused.
+Installation is user-local; no administrator privileges, shell profile edits or system
+PATH/security changes are made. Add the displayed command directory to PATH yourself.
+
+The trust root is the GitHub project/release over HTTPS, not an independent signature.
+For review before execution, download `install.sh`/`install.ps1` and the matching
+`src/installer/` scripts from the same tag. To use a separately trusted archive pin,
+run from that checkout without any network calls:
+
+```sh
+sh ./install.sh --archive ./svm-replay-0.2.0-linux-x86_64.tar.gz --sha256 "$ARCHIVE_SHA256" \
+  --prefix "$HOME/.local/share/svm-replay/installations/0.2.0" --bin-dir "$HOME/.local/bin"
+```
+
+The PowerShell equivalent accepts `-Archive`, `-Sha256`, `-Prefix` and `-BinDir`.
+Windows supports Unicode user profiles; custom paths must use ASCII directory
+names below the common install/bin parent (the launcher refuses unrepresentable paths).
+The prefix must be a new directory. Temporary downloads are cleaned on success/failure;
+a failed native install preserves its partial destination for diagnosis, without
+publishing a command. This does not supersede the platform qualification limits below.
+
+Release maintainers generate the required checksum asset from the actual archives:
+`node src/installer/_2_release/checksums.mjs release.json SHA256SUMS`.
+It verifies every manifest archive hash before writing a new file. Publish that file
+alongside the manifest and archives; consumers do not need this build-time utility.
 
 ## Packages
 
@@ -79,7 +127,7 @@ trusted release checksums. Put the archive beside the manifest. With Node 22+
 and `tar` installed:
 
 ```sh
-npx --package @xternet/svm-replay@0.1.0 svm-replay-install \
+npx --package @xternet/svm-replay@0.2.0 svm-replay-install \
   --release ./release.json --sha256 "$RELEASE_SHA256" --output ./svm-replay
 ```
 
@@ -90,7 +138,7 @@ settings. `npx` may fetch the npm package; the installer itself is offline.
 PowerShell:
 
 ```powershell
-npx --package @xternet/svm-replay@0.1.0 svm-replay-install --release .\release.json --sha256 $env:RELEASE_SHA256 --output .\svm-replay
+npx --package @xternet/svm-replay@0.2.0 svm-replay-install --release .\release.json --sha256 $env:RELEASE_SHA256 --output .\svm-replay
 .\svm-replay\bin\svm-replay.exe demo
 ```
 
@@ -107,7 +155,7 @@ files against modification. That local record is not a digital signature.
 To get the short command through npm (after publication):
 
 ```sh
-npm install -g @xternet/svm-replay@0.1.0
+npm install -g @xternet/svm-replay@0.2.0
 svm-replay-install --release ./release.json --sha256 "$RELEASE_SHA256" --output ./svm-replay --activate
 svm-replay doctor
 svm-replay --demo
@@ -155,8 +203,8 @@ worker catalog and an independently obtained SHA-256:
 ```
 
 Optional `--family v3-0` (repeat or comma-separate) includes only selected installed
-families. `--reference-only` omits trace/debug workers; those modes then reject
-explicitly. No closest-version fallback. The current Linux seven-family runtime bundle
+runtimes, by family ID (`v3-0` is Agave 3.0.10; see [runtimes](runtimes.md)). `--reference-only` omits trace/debug workers; those modes then reject
+explicitly. No closest-version fallback. The current Linux seven-runtime bundle
 is about 1.88 GB uncompressed; its archive, including worker sources and notices,
 is about 488 MB. Other platform sizes depend on their builds.
 
@@ -191,7 +239,7 @@ npm ci --ignore-scripts
 npm test
 npm pack
 # In a separate consumer project:
-npm install /absolute/path/xternet-svm-replay-0.1.0.tgz
+npm install /absolute/path/xternet-svm-replay-0.2.0.tgz
 ```
 
 The tarball includes compiled ESM and declarations, a Node type-only dependency, no runtime dependencies or
@@ -199,7 +247,7 @@ postinstall scripts. Node 22 and Bun are tested callers; both still need qualifi
 native workers. `Replay.open({bundlePath, bundleSha256, ...})` verifies the install.
 See the [SDK guide](../src/bindings/typescript/README.md) and [integration examples](integrations.md).
 
-The planned package is `@xternet/svm-replay@0.1.0`. No PyPI package
+The planned package is `@xternet/svm-replay@0.2.0`. No PyPI package
 is claimed; other languages can call the JSON CLI and retain its receipts.
 
 ## Clean-environment installation check

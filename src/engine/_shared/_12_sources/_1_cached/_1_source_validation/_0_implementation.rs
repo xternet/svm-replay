@@ -19,6 +19,13 @@ impl HistoricalSource for CachedSource {
         }
         Ok(record)
     }
+    fn archive(&self, query: &Value) -> Result<Option<Value>> {
+        // Archive reads, like discovery, are pinned by the provider's own cache.
+        self.check_identity()?;
+        let result = self.inner.archive(query)?;
+        self.check_identity()?;
+        Ok(result)
+    }
     fn identity(&self) -> Value {
         self.inner.identity()
     }
@@ -82,6 +89,7 @@ impl HistoricalSource for CachedSource {
                 validate_record(&entry["record"], query)?;
                 self.check_identity()?;
                 self.pin(&mut store, &key)?;
+                crate::shared::progress::cache_hit();
                 return Ok(Some(entry["record"].clone()));
             }
             require(

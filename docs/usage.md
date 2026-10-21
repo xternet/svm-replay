@@ -13,7 +13,8 @@ export API_ALCHEMY="your-key"
 svm-replay --tx SIGNATURE
 svm-replay --tx SIGNATURE --json
 svm-replay --tx SIGNATURE --pretty --out ./results
-svm-replay --tx SIGNATURE --replace @payload.json --overrides @accounts.json --collect '{"calls":true}'
+svm-replay --tx SIGNATURE --replace @payload.json --overrides @accounts.json
+svm-replay --tx SIGNATURE --collect '{"calls":true}'
 svm-replay --tx SIGNATURE --out results --no-cache
 svm-replay --tx SIGNATURE --fields status,logs,computeUnits
 svm-replay --tx SIGNATURE --alchemy-key-file /path/to/key.txt --human
@@ -124,9 +125,42 @@ context. A custom registry must be independently reviewed and pinned; it cannot
 create worker support or prove compatibility by itself. Discovery still uses
 Alchemy. No missing inputs are inferred from current state.
 
-`--replace` accepts `{"transactionBase64":"BASE64_SERIALIZED_TRANSACTION"}`.
-`--overrides` accepts e.g. `[{"pubkey":"ACCOUNT_ADDRESS","lamports":"1000000000"}]`;
-`dataBase64` patches account data, including supported program-code overrides.
+### Bundles and state overrides
+
+```sh
+svm-replay --tx SIGNATURE --append @bundle.json                  # run them right after it
+svm-replay --tx SIGNATURE --replace @bundle.json                 # run them instead of it
+svm-replay --tx SIGNATURE --overrides @accounts.json             # run it again on changed state
+svm-replay --tx SIGNATURE --overrides '[{"pubkey":"ADDRESS","program":"@arb.so"}]' --append @bundle.json
+```
+
+- A bundle is `{"transactionBase64":"BASE64_SERIALIZED_TRANSACTION"}` or an array of them, at
+  most 16, run in order. Each transaction gets its own result in `result.whatIf.transactions`,
+  in the same order. A transaction the runtime rejects before execution is reported and changes
+  nothing; a failed one pays its fee, as on chain. The next one runs on the state left behind.
+- `--append` runs the bundle after the target, on the state it left. `--replace` runs it where the
+  target ran (after the same-block transactions before it); the target does not run there.
+- Overrides work like `eth_call` state overrides, on any account, existing or new:
+  `pubkey`, `lamports`, `owner`, `executable`, `rentEpoch`, `dataBase64` (at most 64 accounts).
+  - With `owner`, the override replaces the whole account. Left-out fields: not executable, no
+    data, `rentEpoch` 18446744073709551615, and the rent-exempt minimum of lamports under the
+    historical Rent sysvar. Such accounts need no historical image.
+  - Without `owner`, the given fields change the account as it is at that point; it must exist.
+  - `"lamports":"0"` deletes the account. Use it also to declare a new account that your
+    transactions create: the archive cannot prove that an account did not exist.
+  - `"program":"@path/to/program.so"` (CLI and SDK) places that program: owner
+    `BPFLoader2111111111111111111111111111111111`, executable, the file as data. It can be
+    called at once.
+- Overrides apply just before the first bundle transaction (with `--append`, after the target).
+  `result.whatIf.stateOverrides` shows each account before and after.
+- The original still runs first and must verify; then the bundle runs on that state, on the
+  same historical runtime. `--collect` and debugging do not support bundles or state overrides
+  yet. Feature accounts can be overridden as data, but the runtime's feature set stays the
+  historical one.
+- Requests shaped like 0.1.0 (no `--append`, one `--replace` object, overrides with only
+  `pubkey`, `lamports` and `dataBase64`) keep the 0.1.0 behavior and result fields
+  (`replacement`, `requestedOverrides`); there, overrides must be accounts of the transaction.
+
 Use inline JSON or prefix a filename with `@`: `@./payload.json`, `@../payload.json`,
 or `@/absolute/path/payload.json`. This is a JSON file, not a file of raw base64.
 Original-control inputs are never overwritten by these changes.
@@ -213,6 +247,9 @@ svm-replay request --candidate candidate.json --runtime-binding runtime.json \
   --output historical-request.json
 svm-replay validate --request historical-request.json
 ```
+
+`--family` takes the family ID of a pinned runtime: `v3-0` is Agave 3.0.10
+([runtimes](runtimes.md)).
 
 If you already have a full archived `getBlock` JSON response, replace
 `--candidate candidate.json` with `--block block.json --signature "$SIGNATURE"`.

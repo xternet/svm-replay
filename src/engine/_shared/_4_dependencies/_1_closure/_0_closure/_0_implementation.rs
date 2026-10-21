@@ -48,6 +48,7 @@ where
             &program_data.iter().cloned().collect::<Vec<_>>(),
             iteration,
         )?;
+        crate::shared::progress::earlier_total(closure.selected_indices.len() as u64, false);
         let uninspected: Vec<_> = closure
             .dependency_accounts
             .iter()

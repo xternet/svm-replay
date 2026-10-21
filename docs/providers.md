@@ -46,14 +46,51 @@ individual replay or simulate call. The signature CLI accepts the same file via
 Surfpool and Anchor companions use the same configured
 Replay instance. No additional credentials belong in their transaction objects.
 
-Only the selected Alchemy credential is forwarded to the native CLI. Workers do
-not receive provider credentials. The transport uses the fixed HTTPS Solana
-mainnet Alchemy endpoint, with no redirects or automatic retries. Missing/invalid
+Workers do not receive provider credentials. The legacy transport uses the HTTPS
+Solana mainnet Alchemy endpoint, with no redirects or automatic retries. Missing/invalid
 keys fail explicitly; there is no legacy-variable or current-state fallback.
 Selecting the live adapter requires the key even when some reads are cached.
 
-No alternate credential variable is read. Keep credentials in your environment,
-not JSON configuration, source files or receipts.
+Keep credentials in your environment or a private key file, not configuration,
+source files or receipts.
+
+### Native provider configuration
+
+Provider names select adapters, **not keys**. Only `alchemy` is implemented;
+there is no TxLab API or automatic alternate provider.
+
+```sh
+export API_ALCHEMY="YOUR_KEY"
+svm-replay --tx SIGNATURE --historical-provider alchemy
+```
+
+An optional `svm-replay.toml` in the current directory can name a provider and
+its credential source. An explicit `--historical-config FILE` selects another
+file (including an `Anchor.toml` containing this section):
+
+```toml
+[historical]
+provider = "archive"
+
+[historical.providers.archive]
+adapter = "alchemy"
+key_env = "API_ALCHEMY"
+# Optional endpoint override; the adapter's Alchemy endpoint is the default:
+# url = "https://solana-mainnet.g.alchemy.com/v2/{key}"
+```
+
+`--historical-provider archive` overrides the configured default name. Use
+`key_file = "private/key.txt"` instead of `key_env` for a path relative to the
+TOML file. Do not configure both. The URL must use HTTPS and contain exactly one
+`{key}` placeholder; only use trusted project configuration and endpoints.
+
+For a one-off override, `--historical-key env:MY_KEY` or
+`--historical-key-file FILE` takes precedence over the configured credential
+source. An inline `--historical-key "KEY"` also works but exposes the key in
+shell history/process arguments; prefer environment/file references. These
+explicit provider options do not require or import `.env`, do not mutate the
+process environment, and cannot be combined with legacy `--alchemy-config`.
+Unknown providers, malformed config and missing keys fail before acquisition.
 
 ## Availability and cost
 

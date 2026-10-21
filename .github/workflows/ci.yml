@@ -1,9 +1,20 @@
 name: SVM Replay checks
-on: [push, pull_request, workflow_dispatch]
+on:
+  push:
+    branches-ignore: ['0.2.0']
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      native:
+        description: Run the full six-target native candidate qualification
+        type: boolean
+        required: false
+        default: false
 permissions:
   contents: read
 jobs:
   portable-sdk:
+    if: github.event_name != 'workflow_dispatch' || !inputs.native
     strategy:
       fail-fast: false
       matrix:
@@ -11,12 +22,14 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
-          node-version: '22'
+          node-version: '22.22.0'
       - name: Repository layout
         run: node --test tests/interfaces/layout/repository.test.mjs
+      - name: Native installer checks (offline)
+        run: node --test tests/interfaces/packaging/native-installer.test.mjs
       - name: Install SDK dependencies
         working-directory: src/bindings/typescript
         run: npm ci --ignore-scripts
@@ -27,13 +40,14 @@ jobs:
         working-directory: src/bindings/typescript
         run: npm pack --dry-run
   offline-checks:
+    if: github.event_name != 'workflow_dispatch' || !inputs.native
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
-          node-version: '22'
+          node-version: '22.22.0'
           cache: npm
           cache-dependency-path: |
             src/bindings/typescript/package-lock.json
@@ -53,7 +67,7 @@ jobs:
           cargo +1.94.0 fmt --all --check
           cargo +1.94.0 test --workspace --locked --jobs 2
       - name: Package and contributor safeguards
-        run: node --test tests/interfaces/packaging/metadata.test.mjs tests/interfaces/packaging/contribution.test.mjs
+        run: node --test tests/interfaces/packaging/metadata.test.mjs tests/interfaces/packaging/contribution.test.mjs tests/interfaces/packaging/integration-docs.test.mjs
       - name: TypeScript binding and package
         working-directory: src/bindings/typescript
         run: |
@@ -64,10 +78,141 @@ jobs:
         run: |
           npm --prefix examples ci --ignore-scripts
           npm --prefix examples test
-      - uses: oven-sh/setup-bun@v2
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
         with:
           bun-version: '1.3.11'
       - name: Cross-component tests
         run: |
           npm --prefix tests ci --ignore-scripts
-          bun test tests
+          bun test ./tests
+
+  native-candidate:
+    if: github.event_name == 'workflow_dispatch' && inputs.native && !github.event.repository.private
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: x64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+          - runner: macos-15
+            arch: arm64
+          - runner: macos-15-intel
+            arch: x64
+          - runner: windows-2025
+            arch: x64
+          - runner: windows-11-arm
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 120
+    env:
+      SVM_REPLAY_VALIDATION_SOURCE: ${{ github.workspace }}
+      NATIVE_SCOPE: all
+      PYTHONDONTWRITEBYTECODE: '1'
+      CARGO_BUILD_JOBS: '4'
+      CARGO_PROFILE_DEV_DEBUG: '0'
+      CARGO_PROFILE_RELEASE_DEBUG: '0'
+      CARGO_INCREMENTAL: '0'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22.22.0'
+          architecture: ${{ matrix.arch }}
+      - name: Native Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.13'
+          architecture: ${{ matrix.arch }}
+      - name: Pinned native Rust
+        run: rustup toolchain install 1.94.0 --profile minimal
+      - name: Qualification harness checks
+        run: |
+          python -m unittest discover -s tests/interfaces/packaging/native-ci/scripts -p "test_*.py"
+          node --test tests/interfaces/packaging/native-ci/scripts/process_identity.test.mjs
+      - name: Fetch checksum-pinned public validation inputs
+        run: python tests/interfaces/packaging/native-ci/scripts/download_inputs.py
+      - name: Actual native execution, capture, debug, session and SDK qualification
+        run: python tests/interfaces/packaging/native-ci/scripts/native_matrix.py
+      - name: Final-layout archive and clean native installation
+        run: python tests/interfaces/packaging/native-ci/scripts/demo_qualification.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: native-diagnostics-${{ runner.os }}-${{ runner.arch }}
+          path: |
+            tests/interfaces/packaging/native-ci/reports/*.log
+            tests/interfaces/packaging/native-ci/reports/*summary.json
+            tests/interfaces/packaging/native-ci/reports/*capture-gate.json
+            tests/interfaces/packaging/native-ci/reports/native-sessions/*.log
+            tests/interfaces/packaging/native-ci/reports/native-sessions/summary.json
+          retention-days: 1
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: success()
+        with:
+          name: native-candidate-${{ runner.os }}-${{ runner.arch }}
+          path: |
+            tests/interfaces/packaging/native-ci/reports/installer-inputs/*
+            tests/interfaces/packaging/native-ci/reports/sdk-packed/*.tgz
+          if-no-files-found: error
+          retention-days: 1
+
+  clean-consumer:
+    needs: native-candidate
+    if: github.event_name == 'workflow_dispatch' && inputs.native && !github.event.repository.private
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: x64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+          - runner: macos-15
+            arch: arm64
+          - runner: macos-15-intel
+            arch: x64
+          - runner: windows-2025
+            arch: x64
+          - runner: windows-11-arm
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22.22.0'
+          architecture: ${{ matrix.arch }}
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.13'
+          architecture: ${{ matrix.arch }}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: native-candidate-${{ runner.os }}-${{ runner.arch }}
+          path: tests/interfaces/packaging/native-ci/downloads
+      - name: Create isolated reports
+        shell: python
+        run: |
+          from pathlib import Path
+          Path('tests/interfaces/packaging/native-ci/reports').mkdir()
+      - name: Clean native installation and packed SDK consumer
+        run: python tests/interfaces/packaging/native-ci/scripts/fresh_consumer.py . tests/interfaces/packaging/native-ci/downloads tests/interfaces/packaging/native-ci/reports
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: clean-consumer-${{ runner.os }}-${{ runner.arch }}
+          path: |
+            tests/interfaces/packaging/native-ci/reports/*.log
+            tests/interfaces/packaging/native-ci/reports/*summary.json
+          retention-days: 1

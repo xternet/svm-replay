@@ -6,10 +6,13 @@ mod _0_collect;
 mod _1_payload;
 pub(super) use _0_collect::collect;
 use _1_payload::json_argument;
-pub(super) use _1_payload::{overrides, replacement};
+pub(super) use _1_payload::{bundle, overrides, variants};
 #[path = "tests/collect.rs"]
 #[cfg(test)]
 mod collect_tests;
 #[path = "tests/tests.rs"]
 #[cfg(test)]
 mod tests;
+#[path = "tests/what_if.rs"]
+#[cfg(test)]
+mod what_if_tests;

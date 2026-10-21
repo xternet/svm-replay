@@ -1,0 +1,77 @@
+import ast
+import inspect
+import unittest
+from pathlib import Path
+import native_matrix
+from native_matrix import digest, encoded, verify_native_output
+
+
+class ReleaseBuildTests(unittest.TestCase):
+    def setUp(self):
+        self.tree = ast.parse(inspect.getsource(native_matrix.main))
+        commands = [node.value for node in ast.walk(self.tree)
+                    if isinstance(node, ast.Assign)
+                    and any(isinstance(target, ast.Name) and target.id == 'cargo'
+                            for target in node.targets)]
+        self.assertEqual(len(commands), 1)
+        self.cargo = ast.literal_eval(commands[0])
+
+    def test_workers_use_release_build(self):
+        self.assertIn('build', self.cargo)
+        self.assertEqual(self.cargo.count('--release'), 1)
+
+    def test_cli_inherits_release_without_duplicate_flag(self):
+        calls = [node for node in ast.walk(self.tree)
+                 if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+                 and node.func.id == 'run' and node.args
+                 and isinstance(node.args[0], ast.Constant)
+                 and node.args[0].value == 'cli-build']
+        self.assertEqual(len(calls), 1)
+        argv = calls[0].args[1]
+        self.assertIsInstance(argv, ast.BinOp)
+        self.assertEqual(argv.left.id, 'cargo')
+        self.assertEqual((self.cargo + ast.literal_eval(argv.right)).count('--release'), 1)
+
+    def test_packaged_worker_paths_use_release_outputs(self):
+        for name in ('native_matrix.py', 'native_capture.py'):
+            source = Path(native_matrix.__file__).with_name(name).read_text()
+            with self.subTest(script=name):
+                self.assertNotIn('target/debug/', source)
+                self.assertIn('target/release/', source)
+
+    def test_rebuilt_reference_source_identity_is_not_the_retained_binary_identity(self):
+        assignments = [node.value for node in ast.walk(self.tree)
+                       if isinstance(node, ast.Assign) and any(
+                           isinstance(target, ast.Name) and target.id == 'descriptor'
+                           for target in node.targets)]
+        self.assertEqual(len(assignments), 1)
+        keywords = {item.arg: ast.unparse(item.value) for item in assignments[0].keywords}
+        self.assertEqual(keywords.get('sourceSha256'), "build['portableInputSha256']")
+
+
+class NativeOutputTests(unittest.TestCase):
+    def setUp(self):
+        self.original = {'runtimeBindingHash': 'old', 'original': {'balance': '100', 'cu': 37}}
+        self.native = dict(self.original, runtimeBindingHash='native')
+        self.expected = digest(encoded(self.original))
+
+    def check(self, value, pin=None):
+        raw = encoded(value)
+        verify_native_output(raw, digest(raw) if pin is None else pin, 'native', 'old', self.expected)
+
+    def test_only_binding_change_is_accepted(self):
+        self.check(self.native)
+
+    def test_execution_change_is_rejected(self):
+        for field in ('balance', 'cu'):
+            value = dict(self.native, original=dict(self.native['original'], **{field: 99}))
+            with self.assertRaisesRegex(RuntimeError, 'historical execution'):
+                self.check(value)
+
+    def test_wrong_native_identity_is_rejected(self):
+        with self.assertRaisesRegex(RuntimeError, 'native output binding'):
+            self.check(dict(self.native, runtimeBindingHash='other'))
+
+    def test_receipt_corruption_is_rejected(self):
+        with self.assertRaisesRegex(RuntimeError, 'receipt output digest'):
+            self.check(self.native, 'bad')

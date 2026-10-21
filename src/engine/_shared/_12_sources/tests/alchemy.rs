@@ -29,8 +29,17 @@ mod original_m1_account_normalization_differential;
 #[path = "alchemy_cases/budget_diagnostics.rs"]
 mod budget_diagnostics;
 
+#[path = "alchemy_cases/archive_queries.rs"]
+mod archive_queries;
+
 #[path = "alchemy_cases/lookup_recovery.rs"]
 mod lookup_recovery;
 
 #[path = "alchemy_cases/account_write.rs"]
 mod account_write;
+
+#[path = "alchemy_cases/progress.rs"]
+mod progress;
+
+#[path = "alchemy_cases/next_block.rs"]
+mod next_block;

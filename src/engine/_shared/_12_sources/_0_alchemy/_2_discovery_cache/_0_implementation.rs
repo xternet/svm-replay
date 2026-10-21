@@ -60,6 +60,7 @@ impl AlchemySource {
                 "discovery context differs",
             )?;
             validate(&entry["value"])?;
+            crate::shared::progress::cache_hit();
             return Ok(entry["value"].clone());
         }
         require(
@@ -93,5 +94,6 @@ impl AlchemySource {
                 validate_record(record, query)
             },
         )
+        .map_err(|error| attribute_source_failure(error, &self.identity))
     }
 }

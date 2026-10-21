@@ -1,14 +1,18 @@
 use super::*;
 
 #[derive(ClapArgs, Default, Clone)]
-pub(in super::super) struct RuntimeArgs {
-    #[arg(long, requires = "catalog_sha256", conflicts_with = "bundle")]
+pub(crate) struct RuntimeArgs {
+    /// Use this worker catalog (with --catalog-sha256).
+    #[arg(long, value_name = "FILE", help_heading = help::PINNED, requires = "catalog_sha256", conflicts_with = "bundle")]
     pub(in super::super) catalog: Option<PathBuf>,
-    #[arg(long, requires = "catalog")]
+    /// Trusted SHA-256 of --catalog.
+    #[arg(long, value_name = "SHA256", help_heading = help::PINNED, requires = "catalog")]
     pub(in super::super) catalog_sha256: Option<String>,
-    #[arg(long, requires = "bundle_sha256", conflicts_with = "catalog")]
+    /// Use this installed bundle.json (with --bundle-sha256).
+    #[arg(long, value_name = "FILE", help_heading = help::PINNED, requires = "bundle_sha256", conflicts_with = "catalog")]
     pub(in super::super) bundle: Option<PathBuf>,
-    #[arg(long, requires = "bundle")]
+    /// Trusted SHA-256 of --bundle.
+    #[arg(long, value_name = "SHA256", help_heading = help::PINNED, requires = "bundle")]
     pub(in super::super) bundle_sha256: Option<String>,
 }
 
@@ -48,11 +52,14 @@ impl RuntimeArgs {
 pub(in super::super) enum BundleCommand {
     /// Copy the running CLI and reviewed workers into a new offline directory.
     Pack {
-        #[arg(long)]
+        /// Worker catalog to pack (with --catalog-sha256).
+        #[arg(long, value_name = "FILE")]
         catalog: PathBuf,
-        #[arg(long)]
+        /// Trusted SHA-256 of --catalog.
+        #[arg(long, value_name = "SHA256")]
         catalog_sha256: String,
-        #[arg(long)]
+        /// The new directory to create.
+        #[arg(long, value_name = "DIR")]
         output: PathBuf,
         /// Include only these reviewed families (repeat or comma-separate).
         #[arg(long, value_delimiter = ',')]
@@ -63,11 +70,14 @@ pub(in super::super) enum BundleCommand {
     },
     /// Install an independently pinned offline directory without overwriting data.
     Install {
-        #[arg(long)]
+        /// The bundle.json to install (with --bundle-sha256).
+        #[arg(long, value_name = "FILE")]
         bundle: PathBuf,
-        #[arg(long)]
+        /// Trusted SHA-256 of --bundle.
+        #[arg(long, value_name = "SHA256")]
         bundle_sha256: String,
-        #[arg(long)]
+        /// Where to install; existing data is never overwritten.
+        #[arg(long, value_name = "DIR")]
         output: PathBuf,
     },
 }
@@ -83,26 +93,29 @@ pub(in super::super) enum CacheChoice {
 #[command(
     name = "svm-replay",
     version,
-    about = "Historical Solana simulation and trace export"
+    about = "Replay Solana transactions, execute payloads, or fork historical state"
 )]
 pub(in super::super) struct Args {
     #[command(flatten)]
     pub(in super::super) signature: signature::Options,
-    /// Run the bundled offline example without an API key.
-    #[arg(long, conflicts_with = "tx")]
+    /// Replay the bundled example instead: offline, no key needed.
+    #[arg(long, help_heading = help::REPLAY, conflicts_with = "tx")]
     pub(in super::super) demo: bool,
-    /// Force compact JSON and disable menus; --pretty overrides indentation.
-    #[arg(long, global = true, conflicts_with = "human")]
+    /// Print compact JSON and never show menus.
+    #[arg(long, global = true, help_heading = help::OUTPUT, display_order = 1, conflicts_with = "human")]
     pub(in super::super) json: bool,
-    /// Force indented JSON, including pipes and --out files (terminal JSON is indented by default).
-    #[arg(long, global = true, conflicts_with = "human")]
+    /// Indent the JSON, also when piped or saved with --out.
+    #[arg(long, global = true, help_heading = help::OUTPUT, display_order = 2, conflicts_with = "human")]
     pub(in super::super) pretty: bool,
-    /// Print a readable summary instead of JSON (not for experimental JSONL sessions).
-    #[arg(long, global = true)]
+    /// Print a readable summary instead of JSON.
+    #[arg(long, global = true, help_heading = help::OUTPUT, display_order = 0)]
     pub(in super::super) human: bool,
-    /// Write a safe local issue draft on a typed INTERNAL error; never uploads.
-    #[arg(long, global = true)]
+    /// On an internal error, write an issue draft to FILE (never uploaded).
+    #[arg(long, global = true, value_name = "FILE", help_heading = help::OUTPUT)]
     pub(in super::super) bug_report: Option<PathBuf>,
+    /// Write progress events (svm-replay-progress/v1 NDJSON) to stderr, for UIs.
+    #[arg(long, global = true, help_heading = help::OUTPUT)]
+    pub(in super::super) progress: bool,
     #[command(subcommand)]
     pub(in super::super) command: Option<Command>,
 }

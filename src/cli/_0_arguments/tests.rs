@@ -49,3 +49,24 @@ fn bug_report_flag_is_optional_and_global() {
         );
     }
 }
+
+#[test]
+fn progress_flag_is_opt_in_and_global() {
+    assert!(
+        !Args::try_parse_from(["svm-replay", "demo"])
+            .unwrap()
+            .progress
+    );
+    for argv in [
+        vec!["svm-replay", "--progress", "--tx", "signature"],
+        vec![
+            "svm-replay",
+            "simulate",
+            "--request",
+            "request.json",
+            "--progress",
+        ],
+    ] {
+        assert!(Args::try_parse_from(argv).unwrap().progress);
+    }
+}

@@ -44,3 +44,5 @@ mod _8_composite;
 use _8_composite as composite;
 
 pub use composite::CompositeSource;
+mod _9_failure;
+pub(crate) use _9_failure::{attribute_failure, attribute_source_failure};

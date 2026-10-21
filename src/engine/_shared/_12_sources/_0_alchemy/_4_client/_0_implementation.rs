@@ -17,6 +17,19 @@ pub struct AlchemySource {
     pub(in super::super) budget: Option<Arc<DurableRpcBudget>>,
 }
 impl AlchemySource {
+    /// Explicit shared provider configuration; never mutates process credentials.
+    pub fn from_provider(
+        config: AlchemyConfig,
+        limits: SourceLimits,
+        provider: crate::shared::historical::ResolvedProvider,
+    ) -> Result<Self> {
+        Self::with_transport(
+            config,
+            limits,
+            Arc::new(HttpsTransport::from_provider(provider)?),
+        )
+    }
+
     pub fn from_environment(config: AlchemyConfig, limits: SourceLimits) -> Result<Self> {
         Self::with_transport(
             config,
@@ -37,6 +50,7 @@ impl AlchemySource {
         let expires = Instant::now()
             .checked_add(limits.deadline)
             .ok_or_else(|| SourceError::new("SOURCE_CONFIGURATION", "invalid source deadline"))?;
+        crate::shared::progress::transport_started();
         Ok(Self {
             discovery_cache: None,
             cancellation: None,

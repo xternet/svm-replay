@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { execFileSync } from "node:child_process";
@@ -77,4 +77,14 @@ test("owned Rust and npm packages carry Apache-2.0 and the full license", () => 
     assert.ok(sdk.files.includes("LICENSE") && sdk.files.includes("NOTICE"));
     assert.equal(read("src/bindings/typescript/LICENSE"), license);
     assert.equal(read("src/bindings/typescript/NOTICE"), read("NOTICE"));
+});
+
+test("the npm package ships no compiled module whose source was removed", () => {
+    const sdk = resolve(root, "src/bindings/typescript");
+    const [pack] = JSON.parse(execFileSync("npm", ["pack", "--dry-run", "--json"], {cwd: sdk, encoding: "utf8",
+        stdio: ["ignore", "pipe", "ignore"]}));
+    const stale = pack.files.map(file => file.path)
+        .filter(path => /^dist\/.+\.(js|d\.ts)$/.test(path))
+        .filter(path => !existsSync(resolve(sdk, path.replace(/^dist\//, "src/").replace(/\.(js|d\.ts)$/, ".ts"))));
+    assert.deepEqual(stale, []);
 });

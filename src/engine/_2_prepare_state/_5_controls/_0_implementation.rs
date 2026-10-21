@@ -86,6 +86,20 @@ pub fn validate_boundary(request: &PreparedRequest, block: &Value) -> Result<(),
                 .ok_or_else(|| failure("replacement must be string or null"))?,
         )?;
     }
+    if let Some(value) = request.fixture.get("whatIf") {
+        let what_if: svm_replay_protocol::WhatIf =
+            serde_json::from_value(value.clone()).map_err(|e| failure(format!("whatIf: {e}")))?;
+        if what_if.transactions_base64.is_none()
+            || !replacement.is_null()
+            || request.fixture.get("requestedAccountOverrides").is_some()
+            || request.fixture.get("accountOverride") != Some(&Value::Null)
+        {
+            return Err(failure(
+                "whatIf lists its transactions and excludes other variants",
+            ));
+        }
+        what_if.validate()?;
+    }
     context::assert_bound_context(&request.fixture)?;
     crate::shared::dependencies::_8_credits::validate_preloads(&request.fixture, transactions)?;
     Ok(())
@@ -103,6 +117,7 @@ pub fn original_control(fixture: &Value) -> Result<Value, Error> {
     target.insert("replacementTransactionBase64".into(), Value::Null);
     object.insert("accountOverride".into(), Value::Null);
     object.remove("requestedAccountOverrides");
+    object.remove("whatIf");
     Ok(original)
 }
 
@@ -118,5 +133,6 @@ pub fn has_variant(fixture: &Value) -> Result<bool, Error> {
         .ok_or_else(|| failure("missing account override field"))?;
     Ok(*replacement != json!(null)
         || !account.is_null()
-        || fixture.get("requestedAccountOverrides").is_some())
+        || fixture.get("requestedAccountOverrides").is_some()
+        || fixture.get("whatIf").is_some())
 }

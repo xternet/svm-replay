@@ -51,6 +51,14 @@ pub(in super::super) fn finish(
                     object.retain(|key, _| fields.contains(key));
                 }
             }
+            if let Some(runs) = result
+                .pointer_mut("/whatIf/transactions")
+                .and_then(Value::as_array_mut)
+            {
+                for object in runs.iter_mut().filter_map(Value::as_object_mut) {
+                    object.retain(|key, _| fields.contains(key));
+                }
+            }
         }
         receipt["result"] = result;
         if fields.is_empty() || fields.iter().any(|field| field == "trace") {

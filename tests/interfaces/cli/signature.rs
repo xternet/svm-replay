@@ -213,3 +213,25 @@ fn key_file_is_read_before_installation_and_never_echoed() {
         failure(&args, "SOURCE_CONFIGURATION");
     }
 }
+
+#[test]
+fn progress_preserves_default_stdout_and_emits_one_terminal_on_admission_error() {
+    let ordinary = invoke(&["--tx", "invalid"]);
+    let streaming = invoke(&["--tx", "invalid", "--progress"]);
+    assert_eq!(streaming.stdout, ordinary.stdout);
+    assert!(ordinary.stderr.is_empty());
+    let events = String::from_utf8(streaming.stderr)
+        .unwrap()
+        .lines()
+        .map(|line| serde_json::from_str::<Value>(line).unwrap())
+        .collect::<Vec<_>>();
+    assert_eq!(events.first().unwrap()["schema"], "svm-replay-progress/v1");
+    assert_eq!(
+        events
+            .iter()
+            .filter(|event| event["kind"] == "terminal")
+            .count(),
+        1
+    );
+    assert_eq!(events.last().unwrap()["outcome"], "ERROR");
+}

@@ -112,6 +112,7 @@ fn sigint_and_sigterm_publish_cancelled_receipts_after_descendants_are_reaped() 
         let mut child = CliChild(
             Command::new(env!("CARGO_BIN_EXE_svm-replay"))
                 .arg("simulate")
+                .arg("--progress")
                 .arg("--request")
                 .arg(root.path().join("request.json"))
                 .arg("--catalog")
@@ -125,6 +126,25 @@ fn sigint_and_sigterm_publish_cancelled_receipts_after_descendants_are_reaped() 
                 .spawn()
                 .expect("CLI spawn"),
         );
+        use std::io::{BufRead, BufReader};
+        let stderr = child.0.stderr.take().expect("progress stderr");
+        let (sender, receiver) = std::sync::mpsc::channel();
+        let reader = thread::spawn(move || {
+            BufReader::new(stderr)
+                .lines()
+                .map(|line| {
+                    let line = line.expect("read progress");
+                    let event: Value = serde_json::from_str(&line).expect("structured progress");
+                    sender.send(event.clone()).expect("deliver progress");
+                    event
+                })
+                .collect::<Vec<_>>()
+        });
+        let first = receiver
+            .recv_timeout(Duration::from_secs(3))
+            .expect("progress before completion");
+        assert_eq!(first["schema"], "svm-replay-progress/v1");
+        assert!(child.0.try_wait().unwrap().is_none());
         let deadline = Instant::now() + Duration::from_secs(5);
         while !pid_file.exists() {
             if let Some(status) = child.0.try_wait().expect("poll CLI") {
@@ -137,7 +157,7 @@ fn sigint_and_sigterm_publish_cancelled_receipts_after_descendants_are_reaped() 
                     .expect("CLI stdout")
                     .read_to_string(&mut diagnostic)
                     .expect("read early error");
-                panic!("CLI exited before worker started: {status}: {diagnostic}");
+                panic!("CLI exited before worker started: {status}: {diagnostic:?}");
             }
             assert!(Instant::now() < deadline, "worker did not start");
             thread::sleep(Duration::from_millis(5));
@@ -175,6 +195,12 @@ fn sigint_and_sigterm_publish_cancelled_receipts_after_descendants_are_reaped() 
             serde_json::from_slice(&stdout).expect("cooperative signal produces JSON receipt");
         assert_eq!(receipt["outcome"], "CANCELLED", "{receipt}");
         assert_eq!(receipt["error"]["code"], "WORKER_CANCELLED");
+        let events = reader.join().expect("progress reader joined");
+        assert_eq!(events.iter().filter(|e| e["kind"] == "terminal").count(), 1);
+        assert_eq!(events.last().unwrap()["outcome"], "CANCELLED");
+        assert!(events
+            .iter()
+            .any(|e| e["phase"] == "replaying_earlier_transactions"));
         let stored: Value = serde_json::from_slice(
             &fs::read(
                 receipt["receiptPath"]

@@ -16,7 +16,7 @@ pub(in super::super::super) fn finish(
         created,
         programs,
         changes,
-        migrations,
+        migrations: _,
         supplemental,
         parent: _,
         original_wire,
@@ -24,7 +24,7 @@ pub(in super::super::super) fn finish(
         dependency_transactions,
         ref lifecycle_indices,
         credit_proofs,
-        header_proofs,
+        header_proofs: _,
     } = boundary;
     let binding = &input.runtime_binding;
     let source_hash = Digest::of(raw_bytes);
@@ -98,7 +98,8 @@ pub(in super::super::super) fn finish(
         accounts = array(&initialized["accounts"], "initialized stake accounts")?.clone();
         stake_proofs = array(&initialized["proofs"], "stake proofs")?.clone();
     }
-    assert_account_coverage(&accounts, &a.raw[..=a.index as usize], a.parent)?;
+    assert_account_coverage(&accounts, &a.raw[..=a.index as usize], a.parent)
+        .map_err(|error| what_if::coverage_hint(error, input))?;
     let (generic, recent, address_tables) = resolve_sysvars(
         history,
         &boundary,
@@ -141,27 +142,14 @@ pub(in super::super::super) fn finish(
         json!(bank_context::historical_bank_context_hash(&bank_context)?);
     let mut runtime = json!({"binding":binding,"bankContext":bank_context,"clockDataHash":sysvars::bind_exact_generic_sysvar(&clock,a.slot)?["dataSha256"],
         "lastRestartSlot":restart["binding"],"bankInitializedSysvars":bank_initialized["bindings"],"genericSysvars":generic});
-    for (name, values) in [
-        ("recentAddressTables", recent),
-        ("stakeInitializationProofs", stake_proofs),
-        (
-            "programMigrationProofs",
-            array(&migrations["proofs"], "migration proofs")?.clone(),
-        ),
-    ] {
-        if !values.is_empty() {
-            runtime[name] = json!(values);
-        }
-    }
-    if let Some(value) = initialized_snapshot {
-        runtime["initializedStakeSnapshot"] = value;
-    }
-    if !credit_proofs.is_empty() {
-        runtime["systemCreditPreloads"] = json!(credit_proofs);
-    }
-    if !header_proofs.is_empty() {
-        runtime["programHeaderProofs"] = json!(header_proofs);
-    }
+    decorate_runtime(
+        &mut runtime,
+        input.after_slot,
+        recent,
+        stake_proofs,
+        initialized_snapshot,
+        &boundary,
+    )?;
     let mut wires = Vec::new();
     for tx in selected {
         let bytes = history.transaction(&tx.signature)?;
@@ -181,9 +169,7 @@ pub(in super::super::super) fn finish(
             "evidenceAccounts":original.writable_accounts,"prefixEvidenceAccounts":selected.iter().map(|t|json!({"index":t.index,"pubkeys":t.writable_accounts})).collect::<Vec<_>>(),
             "omittedFeeEffects":fee_effects["omittedFeeEffects"],"omittedFeeEffectsHash":fee_effects["omittedFeeEffectsHash"]},
         "runtime":runtime,"clock":clock,"accounts":accounts,"endAccounts":end_accounts,"accountOverride":null});
-    if let Some(value) = &input.requested_account_overrides {
-        fixture["requestedAccountOverrides"] = value.clone();
-    }
+    what_if::insert_variants(&mut fixture, input, original_wire, &accounts)?;
     if let Some(evidence) = supplemental.get("epochStakeEvidence") {
         fixture["runtime"]["epochStakes"] =
             snapshots::bind_epoch_stake_evidence(&json!({"evidence":evidence,"fixture":fixture}))?;
@@ -213,7 +199,7 @@ pub(in super::super::super) fn finish(
     )?;
     let requested_inventory = imports::inspect(
         programs,
-        &overrides::requested_image_inspection(&accounts, changes)?,
+        &what_if::inventory_images(&accounts, changes, input)?,
         &initialized_ids,
         fixture["runtime"].get("epochStakes").is_some(),
     )?;

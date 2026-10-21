@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Explicit offline installation. No postinstall hook, credentials or implicit downloads.
 import { createHash } from "node:crypto";
-import { createReadStream } from "node:fs";
+import { createReadStream, realpathSync } from "node:fs";
 import { copyFile, cp, lstat, mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -28,7 +28,7 @@ export async function inspectRelease(path, expected, platform) {
     const bytes = await readFile(path);
     if (createHash("sha256").update(bytes).digest("hex") !== expected) throw new Error("release manifest integrity mismatch");
     const manifest = JSON.parse(bytes);
-    if (manifest.version !== "0.1.0" || !Array.isArray(manifest.platforms)) throw new Error("unsupported release manifest");
+    if (manifest.version !== "0.2.0" || !Array.isArray(manifest.platforms)) throw new Error("unsupported release manifest");
     const matches = manifest.platforms.filter(row => row.platform === platform);
     if (matches.length !== 1) throw new Error(`platform ${platform} not included exactly once in release`);
     const row = matches[0];
@@ -104,7 +104,8 @@ export async function install({release, sha256, output, activate:activateCommand
     }
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+// npm starts bin entries through a symlink; compare real paths or the CLI silently does nothing.
+if (process.argv[1] && realpathSync(resolve(process.argv[1])) === fileURLToPath(import.meta.url)) {
     try {
         const {values} = parseArgs({options:{release:{type:"string"},sha256:{type:"string"},output:{type:"string"},activate:{type:"boolean"},help:{type:"boolean"}}});
         if (values.help) console.log("svm-replay-install --release release.json --sha256 <trusted manifest SHA256> --output <new directory> [--activate]\nPlace the matching native archive beside release.json. Requires Node 22+ and tar. --activate selects this install for the npm svm-replay command. No downloads or shell-profile edits.");

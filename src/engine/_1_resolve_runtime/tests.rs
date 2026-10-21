@@ -166,3 +166,18 @@ fn source_binding_resolves_before_any_archive_or_provider_input_exists() {
         "WORKER_IDENTITY"
     );
 }
+#[test]
+fn what_if_fixtures_need_a_worker_that_declares_it() {
+    use svm_replay_engine::_1_resolve_runtime::fixture_capabilities;
+    let plain = json!({"runtime":{}});
+    let what_if = json!({"runtime":{},"whatIf":{"mode":"after","transactionsBase64":["AQ=="]}});
+    let old = vec!["guarded-generic-sysvars/v1".to_owned()];
+    let mut new = old.clone();
+    new.push("what-if-bundle/v1".to_owned());
+    assert!(fixture_capabilities(&plain, &old).is_ok());
+    assert_eq!(
+        fixture_capabilities(&what_if, &old).unwrap_err().code,
+        "UNSUPPORTED_RUNTIME_CAPABILITY"
+    );
+    assert!(fixture_capabilities(&what_if, &new).is_ok());
+}

@@ -3,15 +3,18 @@ use super::*;
 pub(super) fn runtime_requirements(
     a: &crate::_2_prepare_state::analysis::Analysis,
     execution: &[u64],
-    requested: Option<&requested::RequestedResolution>,
+    requested: &[requested::RequestedResolution],
     included: &[dependencies::SemanticTransaction],
     closure: &dependencies::SemanticClosureResult,
 ) -> Result<(Value, BTreeSet<String>, Roles), Error> {
-    let mut requirements = instructions::requirements(&a.raw, &execution, a.index)?;
-    if let Some(requested) = &requested {
-        let mut raw = a.raw.clone();
-        raw[a.index as usize] = requested.raw.clone();
-        let requested_requirements = instructions::requirements(&raw, &[a.index], a.index)?;
+    let mut requirements = instructions::requirements(&a.raw, execution, a.index)?;
+    if !requested.is_empty() {
+        let mut each = Vec::new();
+        for value in requested {
+            let mut raw = a.raw.clone();
+            raw[a.index as usize] = value.raw.clone();
+            each.push(instructions::requirements(&raw, &[a.index], a.index)?);
+        }
         let mut uses = Vec::new();
         for key in ["recentBlockhashes", "slotHashes", "slotHistory"] {
             uses.extend(
@@ -19,14 +22,16 @@ pub(super) fn runtime_requirements(
                     .iter()
                     .cloned(),
             );
-            uses.extend(
-                array(
-                    &requested_requirements[key]["uses"],
-                    "requested sysvar uses",
-                )?
-                .iter()
-                .cloned(),
-            );
+            for requested_requirements in &each {
+                uses.extend(
+                    array(
+                        &requested_requirements[key]["uses"],
+                        "requested sysvar uses",
+                    )?
+                    .iter()
+                    .cloned(),
+                );
+            }
         }
         requirements = instructions::classify(&uses, a.index)?;
     }

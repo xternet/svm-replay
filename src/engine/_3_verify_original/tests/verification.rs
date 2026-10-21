@@ -32,3 +32,6 @@ mod token_metadata;
 
 #[path = "verification_cases/load_failure.rs"]
 mod load_failure;
+
+#[path = "verification_cases/what_if.rs"]
+mod what_if;

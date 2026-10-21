@@ -1,9 +1,15 @@
 #!/usr/bin/env node
 import {spawn} from "node:child_process";
 import {activeBinary} from "./installation.mjs";
-try {
+// Retain the old read-only datasource adapter only for explicit legacy start/stop.
+// The canonical `fork --after` and its help belong to the native historical engine.
+if(process.argv[2]==="fork"&&["start","stop"].includes(process.argv[3]))await import("./fork.mjs");
+else try {
     const binary=await activeBinary();
-    const child=spawn(binary,process.argv.slice(2),{stdio:"inherit",shell:false});
+    const args=process.argv.slice(2);
+    if(process.platform==="linux"&&["fork","session"].includes(args[0])&&
+        !args.some(arg=>arg==="--parent-pid"||arg.startsWith("--parent-pid=")))args.push("--parent-pid",String(process.pid));
+    const child=spawn(binary,args,{stdio:"inherit",shell:false});
     // The native CLI owns cleanup. The launcher waits for it, including signals.
     const interrupt=()=>child.kill("SIGINT"), terminate=()=>child.kill("SIGTERM");
     process.on("SIGINT",interrupt);process.on("SIGTERM",terminate);

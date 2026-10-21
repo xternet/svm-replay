@@ -8,7 +8,7 @@ import {materializeSignatureInputs} from "./signature-input.js";
 import {verifySignatureOutput} from "./signature-output.js";
 import {decodeJson,encodeJson} from "./request.js";
 import type {Execution} from "./process.js";
-import {ReplayError,type SignatureOptions,type SignatureSimulation,type Receipt,type JsonObject} from "./types.js";
+import {ReplayError,type SignatureOptions,type SignatureSimulation,type Receipt,type JsonObject,type ProgressEvent} from "./types.js";
 
 export function signatureArgs(options:SignatureOptions,out:string):string[]{
     if("trace" in options)throw new ReplayError("INVALID_REQUEST","use collect instead of the removed signature trace option");
@@ -16,11 +16,15 @@ export function signatureArgs(options:SignatureOptions,out:string):string[]{
         throw new ReplayError("INVALID_REQUEST","alchemyConfig cannot be combined with maxRequests/maxDownloadBytes");
     if(!/^[1-9A-HJ-NP-Za-km-z]{64,88}$/.test(options.tx))throw new ReplayError("INVALID_REQUEST","invalid transaction signature");
     const args=["--tx",options.tx,"--out",out];
+    if(options.onProgress!==undefined)args.push("--progress");
     const input=(value:unknown)=>{
         if(value!==null&&typeof value==="object"&&!Array.isArray(value)&&Object.keys(value).length===1&&"path" in value&&typeof value.path==="string")return "@"+resolve(value.path);
         return encodeJson(value as JsonObject);
     };
+    if(options.replace!==undefined&&options.append!==undefined)
+        throw new ReplayError("INVALID_REQUEST","append and replace cannot be combined");
     if(options.replace!==undefined)args.push("--replace",input(options.replace));
+    if(options.append!==undefined)args.push("--append",input(options.append));
     if(options.overrides!==undefined)args.push("--overrides",input(options.overrides));
     if(options.collect!==undefined)args.push("--collect",options.collect==="all"?"all":input(options.collect));
     if(options.fields!==undefined)args.push("--fields",options.fields.join(","));
@@ -38,14 +42,14 @@ export function signatureArgs(options:SignatureOptions,out:string):string[]{
     return args;
 }
 export async function replaySignature(options:SignatureOptions,binaryHash:string,dataDir:string|undefined,
-    execute:(args:string[],timeout:number,signal?:AbortSignal,alchemy?:boolean)=>Promise<Execution>,bundleArgs:readonly string[]=[]):Promise<SignatureSimulation>{
+    execute:(args:string[],timeout:number,signal?:AbortSignal,alchemy?:boolean,onProgress?:(event:ProgressEvent)=>void)=>Promise<Execution>,bundleArgs:readonly string[]=[]):Promise<SignatureSimulation>{
     const timeout=options.timeoutMs===undefined?900000:options.timeoutMs;positive(timeout,"timeoutMs");
     const directory=await mkdtemp(join(tmpdir(),"svm-signature-"));
     try {
         const args=signatureArgs(await materializeSignatureInputs(options,directory),directory);
         if(dataDir!==undefined)args.push("--data-dir",dataDir);
         args.push(...bundleArgs);
-        const execution=await execute(args,timeout+10000,options.signal,true);
+        const execution=await execute(args,timeout+10000,options.signal,true,options.onProgress);
         const response=decodeJson(execution.stdout) as unknown as Receipt;
         if(response===null||typeof response!=="object"||!["COMPLETED","NEEDS_INPUT","UNSUPPORTED","MISMATCH","CANCELLED","TIMEOUT","ERROR"].includes(response.outcome)||
             execution.signal!==null||execution.exitCode!==(response.outcome==="COMPLETED"?0:1))throw new ReplayError("HOST_PROTOCOL","CLI outcome or exit status differs");

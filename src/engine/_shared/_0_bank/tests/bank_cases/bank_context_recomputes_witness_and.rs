@@ -1,6 +1,20 @@
 use super::*;
 
 #[test]
+fn initialized_bank_context_uses_vote_fee_metadata_without_an_archived_control() {
+    let (block, _, source) = block_context();
+    let context = derive_initialized_bank_context(&block, 20, &source).unwrap();
+    assert_eq!(context["lamportsPerSignature"], 5);
+    assert_eq!(context["feeWitnessCount"], 2);
+    assert_eq!(context["targetSlot"], 20);
+    assert_eq!(context["requiredRuntimeSysvars"], json!([]));
+    assert!(context.get("signature").is_none());
+    let mut empty = block;
+    empty["result"]["transactions"] = json!([]);
+    assert!(derive_initialized_bank_context(&empty, 20, &source).is_err());
+}
+
+#[test]
 fn bank_context_recomputes_witness_and_insertion_order_lineage_hashes() {
     let (block, selector, source) = block_context();
     let context = derive_historical_bank_context(&block, &selector, &source, &[]).unwrap();

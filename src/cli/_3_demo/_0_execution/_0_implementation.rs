@@ -85,9 +85,12 @@ pub fn run(
     let request = PreparedRequest::parse(&bytes)?;
     loading.finish("Bundle and cached inputs verified");
     super::super::super::terminal::section("Selected example");
+    let runtime = svm_replay_engine::_1_resolve_runtime::registry::Registry::bundled()?
+        .runtime_name_of_family(&request.family)?;
     super::super::super::terminal::stage(&format!(
         "Case: {} | Runtime: {}",
-        demo.case_id, request.family
+        demo.case_id,
+        runtime.name()
     ));
     for (label, value) in [
         ("Transaction", &request.fixture["target"]["signature"]),

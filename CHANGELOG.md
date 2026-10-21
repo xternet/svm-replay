@@ -1,5 +1,52 @@
 # Changelog
 
+## 0.2.0
+
+- Added historical forks through `svm-replay fork --after SIGNATURE|SLOT` and
+  the SDK's `forkAt()`. Slot numbers and transaction signatures are detected
+  automatically; legacy `slot:`/`tx:` prefixes remain accepted. Fork clocks stay
+  frozen until explicit advancement. Local accounts, programs and transactions
+  use the selected pinned runtime worker.
+- Added transaction bundles and account/program overrides. Original replay must
+  verify before modified execution. Each transaction has its own result;
+  capability and size limits remain explicit.
+- Historical session transaction-v1 execution requires the installed worker's
+  `native-transaction-v1/v1` capability (currently Agave4.2). Older workers return
+  `UNSUPPORTED_TRANSACTION_VERSION`; legacy/v0 execution is unchanged.
+- Added named provider configuration in `svm-replay.toml`, `Surfpool.toml` and
+  Anchor's `[historical]` configuration. Credentials can come from environment
+  variables or files. Missing historical images produce typed source errors;
+  an existing account is never silently treated as empty or fetched from tip.
+- Added the private historical backend used by the companion Surfpool changes.
+  `surfpool start --after SIGNATURE|SLOT` keeps Surfpool's public RPC, chain/store
+  policy, SDKs, subscriptions and UI while SVM Replay supplies historical data
+  and execution. Optional datasource matching is excluded from this integration.
+- Added companion Anchor test configuration and Node/Rust templates with
+  isolated per-test Surfpool forks and explicit providers. Test code chooses
+  the boundary, funds local accounts, installs its program and advances the
+  frozen clock. Historical configuration does not redirect `anchor localnet`
+  or every Anchor command. These integrations require compatible companion tool
+  releases; the examples do not imply upstream acceptance.
+- Added clock/epoch control, reset, snapshots, local account/program edits and
+  persistence contracts behind the historical backend. Standalone fork RPC is
+  a smaller surface than Surfpool. Synthetic epoch travel does not replay all
+  skipped blocks, settlement or rewards.
+- Runtime output uses the pinned Agave release names while family IDs remain
+  machine identifiers. Runtime provenance is not proof of the exact binary a
+  historical validator ran. Newer slots carry an explicit qualification warning;
+  see [runtime coverage](docs/runtimes.md) and [limitations](docs/limitations.md).
+- Packages include seven execution and seven capture workers with their source,
+  locks and build evidence. Replay, capture and debugger capability requirements
+  are checked separately. A native bundle is required in addition to the npm
+  launcher/SDK or Cargo-built coordinator.
+- Added versioned progress events, readable terminal results, typed provider
+  diagnostics and owned process/cancellation handling. Stdout remains the result
+  channel for scripted callers.
+- Added normal and historical Anchor CI recipes and opt-in offline integration
+  jobs. Provider-recorded fixtures need separate publication clearance; native
+  platform qualification and clean installation results are recorded separately.
+- Fixed npm-bin installation so `svm-replay-install` runs through npm's symlink.
+
 ## 0.1.0 — historical replay fixes
 
 - Added reviewed runtime profiles, historical transaction decoding and provider
@@ -83,8 +130,8 @@
 - Owned packages include Apache-2.0 and NOTICE. CLI packaging excludes development
   dependencies; engine test helpers remain inside their crate.
 
-Owned code is licensed under Apache-2.0. Not yet a public release. Runtime sources,
-patches and notices are staged for review; provider snapshots remain private.
-Clean-container qualification passed on Ubuntu 24.04 and Debian 13. Final artifact
-review and publication approval remain open. See [validation](docs/validation.md)
-and [limitations](docs/limitations.md).
+Owned code is licensed under Apache-2.0. Runtime sources include their patch and
+dependency notices; provider snapshots require a separate publication basis.
+The Ubuntu 24.04 and Debian 13 container runs above belong to prior qualification,
+not proof for every new release artifact. See [validation](docs/validation.md)
+and [limitations](docs/limitations.md) for the scope of current results.

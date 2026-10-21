@@ -1,4 +1,5 @@
 use super::*;
+use crate::shared::progress::{self, Phase};
 
 pub(crate) fn execute(
     request: &PreparedRequest,
@@ -68,12 +69,14 @@ pub(crate) fn execute_hydrated(
             result
         },
         |key, slot| {
+            progress::phase(Phase::FetchingHistoricalAccounts);
             let (account, hashes) = hydrate(key, slot)?;
             evidence.borrow_mut().extend(hashes);
             Ok(account)
         },
     )?;
     coordinator.verify()?;
+    progress::phase(Phase::SavingInputs);
     let fixture_hash = _5_finalize::write_json(&job.join("prepared.json"), &settled.fixture)?;
     let evidence = evidence.into_inner();
     let mut reusable = request.clone();

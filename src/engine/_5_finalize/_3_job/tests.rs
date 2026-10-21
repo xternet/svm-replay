@@ -1,6 +1,41 @@
 use super::*;
 
 #[test]
+fn unqualified_runtime_selection_survives_success_and_failure_receipts() {
+    let data = tempfile::tempdir().unwrap();
+    let executable = std::env::current_exe().unwrap();
+    let config = Config {
+        catalog_path: data.path().join("unused-catalog"),
+        catalog_sha256: Digest::of(b"catalog"),
+        data_dir: data.path().to_path_buf(),
+        owner: crate::shared::runtime::ProcessOwner {
+            sha256: crate::shared::runtime::file_sha256(&executable).unwrap(),
+            executable,
+        },
+        cache: crate::CacheMode::Off,
+        trace: None,
+    };
+    let selection = json!({"status":"UNQUALIFIED_NEWER_SLOT","targetSlot":457797318,
+        "reviewedThroughSlot":451646918,"warning":"last-known features"});
+    for request in [
+        json!({"runtimeBinding":{"executor":{"runtimeSelection":selection}}}),
+        json!({"fixture":{"runtime":{"binding":{"executor":{"runtimeSelection":selection}}}}}),
+    ] {
+        for result in [
+            Ok(json!({})),
+            Err(Error::new("MISMATCH", "control differs")),
+        ] {
+            let (job, receipt, _) = begin_job(&request, &config, "test").unwrap();
+            assert_eq!(receipt["runtimeSelection"], selection);
+            let receipt = finish_job(result, receipt, &job, Instant::now()).unwrap();
+            assert_eq!(receipt["runtimeSelection"], selection);
+        }
+    }
+    let (_, receipt, _) = begin_job(&json!({}), &config, "test").unwrap();
+    assert!(receipt.get("runtimeSelection").is_none());
+}
+
+#[test]
 fn controller_disconnect_is_cancelled_without_publishing_a_result() {
     let job = tempfile::tempdir().unwrap();
     let result = finish_job(
