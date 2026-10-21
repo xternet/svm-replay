@@ -73,7 +73,9 @@ fn the_line_server_answers_each_request_and_stops_on_shutdown_or_end_of_input() 
 
 #[test]
 fn an_unhealthy_worker_ends_the_server_with_its_error() {
-    let (reader, _writer) = std::os::unix::net::UnixStream::pair().unwrap();
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let _writer = std::net::TcpStream::connect(listener.local_addr().unwrap()).unwrap();
+    let (reader, _) = listener.accept().unwrap();
     let error = _3_serve::serve_lines(
         reader,
         Vec::new(),

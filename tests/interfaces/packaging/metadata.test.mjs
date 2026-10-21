@@ -82,7 +82,7 @@ test("owned Rust and npm packages carry Apache-2.0 and the full license", () => 
 test("the npm package ships no compiled module whose source was removed", () => {
     const sdk = resolve(root, "src/bindings/typescript");
     const [pack] = JSON.parse(execFileSync("npm", ["pack", "--dry-run", "--json"], {cwd: sdk, encoding: "utf8",
-        stdio: ["ignore", "pipe", "ignore"]}));
+        stdio: ["ignore", "pipe", "pipe"]}));
     const stale = pack.files.map(file => file.path)
         .filter(path => /^dist\/.+\.(js|d\.ts)$/.test(path))
         .filter(path => !existsSync(resolve(sdk, path.replace(/^dist\//, "src/").replace(/\.(js|d\.ts)$/, ".ts"))));

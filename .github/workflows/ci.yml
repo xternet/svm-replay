@@ -74,14 +74,14 @@ jobs:
         run: |
           cargo +1.94.0 fmt --all --check
           cargo +1.94.0 test --workspace --locked --jobs 2
-      - name: Package and contributor safeguards
-        run: node --test tests/interfaces/packaging/metadata.test.mjs tests/interfaces/packaging/contribution.test.mjs tests/interfaces/packaging/integration-docs.test.mjs
       - name: TypeScript binding and package
         working-directory: src/bindings/typescript
         run: |
           npm ci --ignore-scripts
           npm test
           npm pack
+      - name: Package and contributor safeguards
+        run: node --test tests/interfaces/packaging/metadata.test.mjs tests/interfaces/packaging/contribution.test.mjs tests/interfaces/packaging/integration-docs.test.mjs
       - name: Consumer examples
         run: |
           npm --prefix examples ci --ignore-scripts

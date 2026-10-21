@@ -21,7 +21,7 @@ test("native installer entries stay thin and use numbered platform owners",()=>{
 });
 
 test("the default quick start is a native install followed by a real demo",()=>{
-    const readme=readFileSync(join(root,"README.md"),"utf8");
+    const readme=readFileSync(join(root,"README.md"),"utf8").replace(/\r\n/g,"\n");
     const section=readme.split("## Quick start\n")[1].split("\n## ")[0];
     assert.match(section,/curl -fsSL https:\/\/raw\.githubusercontent\.com\/xternet\/svm-replay\/v0\.2\.0\/install\.sh \| sh/);
     assert.match(section,/svm-replay demo/);

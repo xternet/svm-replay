@@ -10,6 +10,13 @@ import native_matrix
 
 
 class CleanRunnerTests(unittest.TestCase):
+    def test_offline_package_checks_run_after_sdk_dependencies_are_installed(self):
+        root = Path(os.environ["SVM_REPLAY_VALIDATION_SOURCE"])
+        workflow = (root / ".github/workflows/ci.yml").read_text()
+        job = workflow.split("  offline-checks:\n", 1)[1].split("  native-candidate:\n", 1)[0]
+        self.assertLess(job.index("      - name: TypeScript binding and package"),
+                        job.index("      - name: Package and contributor safeguards"))
+
     def test_ordinary_sdk_job_builds_its_native_boundary_prerequisite(self):
         root = Path(os.environ["SVM_REPLAY_VALIDATION_SOURCE"])
         workflow = (root / ".github/workflows/ci.yml").read_text()
