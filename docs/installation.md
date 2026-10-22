@@ -102,6 +102,11 @@ to both manual and guided installation.
   environment variable; workers need it for debugger loopback networking.
   Qualification used Windows Server 2025 x64 and Windows 11 ARM64.
 
+Stateful historical fork/session command sockets require Unix. On native Windows,
+these sessions, including SDK `forkAt()`, return `UNSUPPORTED_PLATFORM`; use WSL2
+with the Linux bundle instead. Native replay and the offline demo are separate
+from this session limitation.
+
 The SDK needs Node 22+ and the same native bundle. Windows executables end in
 `.exe`; use Windows paths and PowerShell quoting instead of the shell examples
 below. No emulation, nearest-runtime substitution or automatic worker download.

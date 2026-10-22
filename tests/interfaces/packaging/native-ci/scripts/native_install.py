@@ -14,6 +14,12 @@ def installer_shells(system: str) -> list[str]:
     raise ValueError("Unqualified installer operating system")
 
 
+def installer_environment(shell: str, inherited: dict[str, str]) -> dict[str, str]:
+    # WinPS launched through Python must not resolve PowerShell 7's modules.
+    return {key: value for key, value in inherited.items()
+            if shell != "powershell.exe" or key.upper() != "PSMODULEPATH"}
+
+
 def qualify(source: Path, release: Path, reports: Path, entry: dict,
             shell: str | None = None) -> dict:
     shell = installer_shells(os.name)[0] if shell is None else shell
@@ -39,7 +45,7 @@ def qualify(source: Path, release: Path, reports: Path, entry: dict,
 
     def run(name, argv):
         log = reports / (label + "-" + name + ".log")
-        result = command(argv, reports, log, 600, os.environ.copy())
+        result = command(argv, reports, log, 600, installer_environment(shell, os.environ.copy()))
         checks.append(dict(result, name=name))
         if result["status"] != "PASS":
             raise RuntimeError(f"Native installer check failed: {name}; {log}")
