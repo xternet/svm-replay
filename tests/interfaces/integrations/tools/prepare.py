@@ -52,7 +52,9 @@ def main():
     subprocess.run([str(work / 'installed/bin/svm-replay'), 'doctor'], check=True, timeout=60)
     base = 'https://github.com/xternet/svm-replay/releases/download/validation-inputs-0.2.0/'
     for name, item in pins['inputs'].items():
-        fetch(base + item['name'], item['sha256'], work / name)
+        url = ('https://github.com/xternet/surfpool-web-ui/releases/download/'
+               'svm-replay-0.2.0-preview.2/studio-dist.zip') if name == 'studio.zip' else base + item['name']
+        fetch(url, item['sha256'], work / name)
     extract(work / 'fixture.tar.gz', work / 'fixture')
     extract(work / 'toy.tar.gz', work / 'toy')
     workspace = work / 'toy/workspace'

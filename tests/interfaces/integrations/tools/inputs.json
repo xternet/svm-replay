@@ -7,6 +7,6 @@
   "inputs": {
     "fixture.tar.gz": {"name": "svm-replay-smoke-413023260.tar.gz", "sha256": "41077d196181a6f5172e0e8858a098a52174afc43a12abb4d2df8e61599356f5"},
     "toy.tar.gz": {"name": "tool-smoke-v1.tar.gz", "sha256": "54e18a97813380c003d7ad7c0aa14e6d441266812ad01f41e586e5c005a4b89d"},
-    "studio.zip": {"name": "studio-dist.zip", "sha256": "fec4dfc86c5e32b27ec34538c56ac7862892c29082ea4f1a9a62753d76c2230c"}
+    "studio.zip": {"name": "studio-dist.zip", "sha256": "ecb65687788895275da4d5115b7fbb72630ffd5b7f949f3e8b441652bfa99d40"}
   }
 }

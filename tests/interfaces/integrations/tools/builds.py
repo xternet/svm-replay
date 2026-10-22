@@ -6,8 +6,8 @@ from pathlib import Path
 import shutil
 import sys
 
-SOURCES = {'surfpool':'a6818b744de5f386b4c2f873f3a32caf05b7f2c7',
-           'anchor':'9a9d6eed2ca591f50faa3f75291e14eae35e1055'}
+SOURCES = {'surfpool':'33262045b129d2c722178b8436035cc957d44bee',
+           'anchor':'cd97ecb4197627c20ca53acd866e2bc9668ebed8'}
 
 
 def digest(path):

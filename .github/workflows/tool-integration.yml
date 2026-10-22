@@ -41,13 +41,13 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           repository: xternet/surfpool
-          ref: a6818b744de5f386b4c2f873f3a32caf05b7f2c7
+          ref: 33262045b129d2c722178b8436035cc957d44bee
           path: surfpool
           persist-credentials: false
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           repository: xternet/anchor
-          ref: 9a9d6eed2ca591f50faa3f75291e14eae35e1055
+          ref: cd97ecb4197627c20ca53acd866e2bc9668ebed8
           path: anchor
           persist-credentials: false
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
@@ -82,6 +82,7 @@ jobs:
           set -euo pipefail
           rustup toolchain install 1.97.1 --profile minimal
           export RUSTUP_TOOLCHAIN=1.97.1
+          export RUSTFLAGS="--remap-path-prefix=$GITHUB_WORKSPACE=/tool-source --remap-path-prefix=$RUNNER_TEMP=/build-output --remap-path-prefix=$HOME=/runner"
           cargo build --locked --manifest-path surfpool/Cargo.toml -p surfpool-cli --bin surfpool
           cargo test --locked --manifest-path surfpool/Cargo.toml -p surfpool-sdk --test historical --no-run --message-format=json > "$TOOL_WORK/sdk-build.jsonl"
           cargo build --locked --manifest-path anchor/Cargo.toml -p anchor-cli --bin anchor

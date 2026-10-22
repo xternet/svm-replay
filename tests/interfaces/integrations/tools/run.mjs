@@ -49,6 +49,7 @@ try {
     const output = run('anchor-historical', process.env.ANCHOR_BIN,
       ['test', '--skip-build', '--skip-deploy']);
     assert.match(output, /2 passing/);
+    run('fixture-compatibility',process.execPath,[new URL('fixtures.mjs',import.meta.url).pathname]);
     const env = {...process.env, M59_AFTER: '413023260', M59_SLOT: '413023261',
       M59_SVM_REPLAY_BIN: process.env.SVM_REPLAY_BIN,
       M59_HISTORICAL_DATA_DIR: join(work, 'fixture/svm-replay-smoke-413023260/data'),
