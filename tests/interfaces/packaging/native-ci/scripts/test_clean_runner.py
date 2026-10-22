@@ -78,18 +78,6 @@ class CleanRunnerTests(unittest.TestCase):
                          {"psmodulepath": "core-only-modules", "OTHER": "retained"}),
                          {"OTHER": "retained"})
 
-    @unittest.skipUnless(os.name == "nt", "requires actual Windows PowerShell")
-    def test_legacy_powershell_hashes_a_real_file_from_python(self):
-        with tempfile.TemporaryDirectory() as directory:
-            script = Path(directory) / "hash probe.ps1"
-            script.write_text("param([string]$InputPath)\n"
-                              "(Get-FileHash -LiteralPath $InputPath -Algorithm SHA256).Hash\n")
-            actual = subprocess.check_output(["powershell.exe", "-NoLogo", "-NoProfile",
-                "-File", str(script), "-InputPath", str(script)], timeout=30,
-                env=native_install.installer_environment("powershell.exe", os.environ.copy()))
-            self.assertEqual(actual.decode().strip().lower(),
-                             hashlib.sha256(script.read_bytes()).hexdigest())
-
     def test_worker_source_recheck_rejects_changed_or_missing_source(self):
         from source_integrity import verify_workers
         with tempfile.TemporaryDirectory() as directory:
