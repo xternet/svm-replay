@@ -49,9 +49,12 @@ Surfpool's companion accepts `{tx}`; `anchorSignature()` builds a replacement.
 
 Node 22+ and Bun, calling the same pinned Rust CLI. No postinstall download or ecosystem peer
 dependency. Supply a native bundle matching your OS and CPU. Linux requires GNU
-libc >= 2.39; macOS uses system libraries; Windows needs the matching MSVC v14
+libc >= 2.35; macOS uses system libraries; Windows needs the matching MSVC v14
 runtime. See [installation](https://github.com/xternet/svm-replay/blob/main/docs/installation.md)
 and [validation](https://github.com/xternet/svm-replay/blob/main/docs/validation.md).
+
+The standalone `forkAt()` client remains Linux-only; this is separate from
+native replay support and Surfpool's own historical launcher.
 
 The package also provides `svm-replay-install --help`: an explicit offline native
 installer using a release manifest, its independently trusted SHA-256 and the

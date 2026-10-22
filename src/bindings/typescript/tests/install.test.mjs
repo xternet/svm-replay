@@ -6,7 +6,17 @@ import { fileURLToPath } from "node:url";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createHash } from "node:crypto";
-import { selectPlatform, inspectRelease, validateArchivePaths } from "../install.mjs";
+import * as installer from "../install.mjs";
+const {selectPlatform, inspectRelease, validateArchivePaths} = installer;
+
+test("installer accepts the qualified Ubuntu 22.04 libc baseline and refuses older or musl", () => {
+    for (const version of ["2.35", "2.39", "2.41"]) {
+        assert.doesNotThrow(() => installer.requireGlibc(version));
+    }
+    for (const version of [undefined, "2.34", "2.17", "1.99"]) {
+        assert.throws(() => installer.requireGlibc(version), /glibc >=2.35/);
+    }
+});
 
 test("installer selects only native qualified OS/CPU pairs", () => {
     assert.equal(selectPlatform("linux", "x64"), "linux-x86_64");

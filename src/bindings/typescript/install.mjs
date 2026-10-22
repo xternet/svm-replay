@@ -59,7 +59,14 @@ function run(binary, args) {
     try {
         return execFileSync(binary, args, {encoding:"utf8", timeout:120000, maxBuffer:8*1024*1024, windowsHide:true});
     } catch (error) {
-        throw new Error(`${binary} failed: ${error.message}\n${error.stderr ?? ""}\n${error.stdout ?? ""}\nCheck system dependencies: Linux glibc 2.39+ and SQLite; Windows matching MSVC v14 runtime; macOS 15.`, {cause:error});
+        throw new Error(`${binary} failed: ${error.message}\n${error.stderr ?? ""}\n${error.stdout ?? ""}\nCheck system dependencies: Linux glibc 2.35+ and SQLite; Windows matching MSVC v14 runtime; macOS 15.`, {cause:error});
+    }
+}
+
+export function requireGlibc(version) {
+    if (!version || Number(version.split(".")[0]) < 2 ||
+        (Number(version.split(".")[0]) === 2 && Number(version.split(".")[1]) < 35)) {
+        throw new Error("Linux bundle requires glibc >=2.35 (musl/older glibc not supported)");
     }
 }
 
@@ -68,11 +75,7 @@ export async function install({release, sha256, output, activate:activateCommand
     const manifestPath = resolve(release);
     const row = await inspectRelease(manifestPath, sha256, platform);
     if (process.platform === "linux") {
-        const version = process.report.getReport().header.glibcVersionRuntime;
-        if (!version || Number(version.split(".")[0]) < 2 ||
-            (Number(version.split(".")[0]) === 2 && Number(version.split(".")[1]) < 39)) {
-            throw new Error("Linux bundle requires glibc >=2.39 (musl/older glibc not supported)");
-        }
+        requireGlibc(process.report.getReport().header.glibcVersionRuntime);
     }
     const temp = await mkdtemp(join(tmpdir(), "svm-replay-install-"));
     const destination = resolve(output);

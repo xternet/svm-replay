@@ -20,6 +20,11 @@ on:
         type: boolean
         required: false
         default: false
+      linux_only:
+        description: Requalify Linux only; reuse separately qualified Mac/Windows artifacts
+        type: boolean
+        required: false
+        default: false
 permissions:
   contents: read
 jobs:
@@ -111,7 +116,7 @@ jobs:
       max-parallel: 6
       matrix:
         runner: >-
-          ${{ fromJSON(inputs.posix_only &&
+          ${{ fromJSON(inputs.linux_only && '["ubuntu-22.04","ubuntu-22.04-arm"]' || inputs.posix_only &&
           '["ubuntu-22.04","ubuntu-22.04-arm","macos-15","macos-15-intel"]' ||
           '["ubuntu-22.04","ubuntu-22.04-arm","macos-15","macos-15-intel","windows-2025","windows-11-arm"]') }}
     runs-on: ${{ matrix.runner }}
@@ -168,7 +173,7 @@ jobs:
             tests/interfaces/packaging/native-ci/reports/native-sessions/summary.json
           retention-days: 1
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        if: success()
+        if: always()
         with:
           name: native-candidate-${{ runner.os }}-${{ runner.arch }}
           path: |
@@ -179,7 +184,7 @@ jobs:
 
   wsl-consumer:
     needs: native-candidate
-    if: github.event_name == 'workflow_dispatch' && inputs.native && !github.event.repository.private
+    if: always() && needs['native-candidate'].result != 'cancelled' && github.event_name == 'workflow_dispatch' && inputs.native && !github.event.repository.private
     uses: ./.github/workflows/wsl-consumer.yml
 
   wsl-probe:
@@ -190,13 +195,13 @@ jobs:
 
   clean-consumer:
     needs: native-candidate
-    if: github.event_name == 'workflow_dispatch' && inputs.native && !github.event.repository.private
+    if: always() && needs['native-candidate'].result != 'cancelled' && github.event_name == 'workflow_dispatch' && inputs.native && !github.event.repository.private
     strategy:
       fail-fast: false
       max-parallel: 6
       matrix:
         runner: >-
-          ${{ fromJSON(inputs.posix_only &&
+          ${{ fromJSON(inputs.linux_only && '["ubuntu-24.04","ubuntu-24.04-arm"]' || inputs.posix_only &&
           '["ubuntu-24.04","ubuntu-24.04-arm","macos-15","macos-15-intel"]' ||
           '["ubuntu-24.04","ubuntu-24.04-arm","macos-15","macos-15-intel","windows-2025","windows-11-arm"]') }}
     runs-on: ${{ matrix.runner }}

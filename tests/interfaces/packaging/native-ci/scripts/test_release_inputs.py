@@ -91,7 +91,7 @@ class ReleaseInputsTests(unittest.TestCase):
         root = Path(os.environ["SVM_REPLAY_VALIDATION_SOURCE"])
         workflow = (root / ".github/workflows/ci.yml").read_text()
         native = workflow.split("  native-candidate:\n", 1)[1].split("  wsl-consumer:\n", 1)[0]
-        runners = json.loads(re.findall(r"'(\[.*?\])'", native)[1])
+        runners = json.loads(re.findall(r"'(\[.*?\])'", native)[2])
         self.assertEqual(set(runners),
             {"ubuntu-22.04", "ubuntu-22.04-arm", "macos-15", "macos-15-intel",
              "windows-2025", "windows-11-arm"})
@@ -105,9 +105,21 @@ class ReleaseInputsTests(unittest.TestCase):
             job = workflow.split(f"  {name}:\n", 1)[1].split("    runs-on:", 1)[0]
             self.assertNotIn("exclude:", job)
             lists = [json.loads(value) for value in re.findall(r"'(\[.*?\])'", job)]
-            self.assertEqual([len(value) for value in lists], [4, 6])
+            self.assertEqual([len(value) for value in lists], [2, 4, 6])
+            self.assertTrue(all(runner.startswith("ubuntu-") for runner in lists[0]))
             self.assertTrue(all(not runner.startswith("windows-") for runner in lists[0]))
-            self.assertEqual(lists[1][:4], lists[0])
+            self.assertEqual(lists[1][:2], lists[0])
+            self.assertEqual(lists[2][:4], lists[1])
+
+    def test_native_archives_are_retained_and_other_consumers_run_after_an_install_failure(self):
+        root = Path(os.environ["SVM_REPLAY_VALIDATION_SOURCE"])
+        workflow = (root / ".github/workflows/ci.yml").read_text()
+        native = workflow.split("  native-candidate:\n", 1)[1].split("  wsl-consumer:\n", 1)[0]
+        archive = native.rsplit("      - uses: actions/upload-artifact@", 1)[1]
+        self.assertIn("if: always()", archive)
+        for name in ("wsl-consumer", "clean-consumer"):
+            job = workflow.split(f"  {name}:\n", 1)[1].split("    strategy:", 1)[0]
+            self.assertIn("always() && needs['native-candidate'].result != 'cancelled'", job)
 
     def test_full_capture_has_no_debugger_skip_switch(self):
         from native_capture import qualify
