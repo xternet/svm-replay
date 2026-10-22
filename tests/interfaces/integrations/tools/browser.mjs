@@ -65,6 +65,21 @@ try {
     };
     await start();
     page = await browser.newPage();
+    let logSubscriptions = 0;
+    page.on('websocket', socket => {
+      const pending = new Set();
+      socket.on('framesent', ({payload}) => {
+        const message = JSON.parse(String(payload));
+        if (message.method === 'logsSubscribe') pending.add(message.id);
+      });
+      socket.on('framereceived', ({payload}) => {
+        const message = JSON.parse(String(payload));
+        if (pending.delete(message.id)) {
+          if (message.error) pageErrors.push(JSON.stringify(message.error));
+          else {assert.equal(typeof message.result,'number'); logSubscriptions++;}
+        }
+      });
+    });
     page.on('pageerror', error => pageErrors.push(String(error)));
     await page.route('**/*', route => {
       const host = new URL(route.request().url()).hostname;
@@ -94,6 +109,7 @@ try {
       assert.equal((await value('getBalance',[payer.publicKey.toBase58(),{commitment:'processed'}])).value,998760433);
       return signature;
     };
+    await until(async () => logSubscriptions > 0, 'initial logsSubscribe acknowledgement');
     await transfer(); rows.push({name:mode+'-signed-transfer-and-inspector',status:'PASS'});
     const error = await rpc('tool_nonexistent_method'); assert.equal(error.error.code,-32601);
     if (historical) {
@@ -107,8 +123,9 @@ try {
     }
     // Crash/reconnect deliberately keeps the browser open. Final normal shutdown
     // closes it first, so graceful HTTP draining is not confused with a crash.
+    const previousSubscriptions = logSubscriptions;
     await stop(true); await sleep(500); await start();
-    await until(async () => !(await text()).includes('Surfnet is Offline'), 'reconnect without reload');
+    await until(async () => logSubscriptions > previousSubscriptions, 'reconnected logsSubscribe acknowledgement');
     await transfer(); rows.push({name:mode+'-restart-resubscribe-without-reload',status:'PASS'});
     await page.screenshot({path:join(work,'reports',mode+'.png')});
     await page.close(); await stop();
