@@ -80,7 +80,7 @@
   never native VM validation.
 - Stateful historical command sessions require Unix sockets. Native Windows
   returns `UNSUPPORTED_PLATFORM`; use the Linux implementation in WSL2. Explicit
-  `--parent-pid` lifetime binding is Linux-only and is refused elsewhere.
+  `--parent-pid` lifetime binding supports Linux/macOS and is refused elsewhere.
 - The standalone `svm-replay fork` server and SDK `forkAt()` have a smaller
   RPC/WS surface than Surfpool: they do not supply Studio, chain-wide scans or
   ordinary Anchor account/log subscriptions. Their VM branch snapshots are

@@ -3,6 +3,7 @@ import json
 import gc
 import os
 import shutil
+import sys
 from pathlib import Path
 from native_matrix import ROOT, digest, encoded
 from release_inputs import unwrap, rebind_request
@@ -27,7 +28,8 @@ def qualify(run, cargo, work, reports, fixtures, workers, manifest, matrix, cata
         run('capture-build-' + family, cargo + ['--target-dir', str(native_target), '--manifest-path', str(workers / build['manifest']), '--bin', package], workers, 1800)
         capture = reports / ('native/' + package + suffix)
         shutil.copy2(work / ('native-target/release/' + package + suffix), capture)
-        require_binary_arch(capture, catalog['platform']['os'], catalog['platform']['arch'])
+        require_binary_arch(capture, catalog['platform']['os'], catalog['platform']['arch'],
+                            linux_baseline=sys.platform == 'linux')
         if native_target.is_symlink() or native_target.parent != work:
             raise RuntimeError('capture cache ownership differs')
         shutil.rmtree(native_target)

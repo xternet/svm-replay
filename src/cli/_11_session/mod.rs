@@ -12,6 +12,7 @@ use svm_replay_engine::shared::{
 };
 use svm_replay_protocol::{parse_json, Error};
 mod _0_implementation;
+mod _1_parent;
 pub(super) use _0_implementation::run;
 #[cfg(test)]
 mod tests;
@@ -38,7 +39,7 @@ pub(crate) struct Options {
     /// Loopback HTTP port (WebSocket on port + 1); zero selects a free pair.
     #[arg(long, default_value_t = 0)]
     port: u16,
-    /// Bind this session's lifetime to its actual SDK parent (Linux).
+    /// Bind this session's lifetime to its actual SDK parent (Linux/macOS).
     #[arg(long, hide = true)]
     parent_pid: Option<u32>,
     /// Emit measured local transaction events on stdout (JSONL).

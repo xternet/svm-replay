@@ -92,7 +92,7 @@ need qualification before being used as a reviewed release.
 See the guided installer and offline demo below; the following requirements apply
 to both manual and guided installation.
 
-- Linux x86_64/ARM64: GNU libc >= 2.39 and system SQLite. Alpine/musl and older
+- Linux x86_64/ARM64: GNU libc >= 2.35 and system SQLite. Alpine/musl and older
   glibc builds are not qualified. WSL2 uses the Linux bundle, not the Windows one.
 - macOS Intel/Apple Silicon: native bundles use system libraries. Qualification
   targets macOS 15; older versions are not claimed as tested.

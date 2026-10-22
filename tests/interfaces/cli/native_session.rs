@@ -158,7 +158,7 @@ mod unix {
 #[cfg(unix)]
 #[path = "native_session_initialization.rs"]
 mod initialization;
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 #[path = "native_session_parent.rs"]
 mod parent;
 #[cfg(unix)]

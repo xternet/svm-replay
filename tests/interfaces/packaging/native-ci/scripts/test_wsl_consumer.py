@@ -21,6 +21,8 @@ class WslConsumerTests(unittest.TestCase):
         source = inspect.getsource(wsl_consumer.main)
         self.assertNotIn('"--set-version"', source)
         self.assertIn("require_wsl2(kernel)", source)
+        self.assertIn('"--exec"', source)
+        self.assertIn("path.resolve().as_posix()", source)
 
     def test_wsl_only_installs_downloaded_bytes_and_reuses_the_actual_consumer(self):
         root = Path(__file__).resolve().parents[5]

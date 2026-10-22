@@ -12,6 +12,28 @@ fn parent_lifetime_binding_rejects_an_unrelated_pid_before_reading_inputs() {
 }
 
 #[test]
+fn actual_parent_binding_precedes_explicit_provider_validation() {
+    let output = Command::new(env!("CARGO_BIN_EXE_svm-replay"))
+        .args([
+            "session",
+            "--parent-pid",
+            &std::process::id().to_string(),
+            "--after",
+            "1",
+            "--historical-provider",
+            "alchemy",
+            "--key",
+            "env:M40_MISSING_KEY",
+        ])
+        .env_remove("M40_MISSING_KEY")
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(1));
+    let result: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(result["error"]["code"], "SOURCE_CONFIGURATION", "{result}");
+}
+
+#[test]
 fn slot_session_reaches_explicit_provider_validation_without_fetching_history() {
     let output = Command::new(env!("CARGO_BIN_EXE_svm-replay"))
         .args([

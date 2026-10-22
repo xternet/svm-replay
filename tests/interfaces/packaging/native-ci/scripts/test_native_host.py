@@ -44,6 +44,14 @@ class NativeHostTests(unittest.TestCase):
             path.write_bytes(macho)
             require_binary_arch(path, "macos", "x86_64")
 
+    def test_glibc_baseline_uses_symbol_versions_and_rejects_newer_dependencies(self):
+        from native_host import require_glibc_version
+        self.assertEqual(require_glibc_version("Name: GLIBC_2.2.5 Name: GLIBC_2.35"), "2.35")
+        self.assertEqual(require_glibc_version("Name: GLIBC_2.9 Name: GLIBC_2.34"), "2.34")
+        for text in ("Name: GLIBC_2.38", "Name: GLIBC_2.39", "Name: GLIBC_2.100", "no versions"):
+            with self.subTest(text=text), self.assertRaises(ValueError):
+                require_glibc_version(text)
+
 
 if __name__ == "__main__":
     unittest.main()

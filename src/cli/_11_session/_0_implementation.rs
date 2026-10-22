@@ -17,7 +17,7 @@ pub(crate) fn run(options: Options) -> Result<Value, Error> {
         None => Some(listeners(options.port)?),
     };
     let cancellation = crate::lifecycle::cancellation::install()?;
-    bind_parent(options.parent_pid)?;
+    super::_1_parent::bind(options.parent_pid, cancellation.clone())?;
     // An embedded backend lives as long as the tool that owns it (it is bound to that
     // parent); the public server keeps its one-hour default.
     let timeout = match (options.controls.timeout, &options.backend) {
@@ -171,41 +171,6 @@ fn listeners(port: u16) -> Result<(TcpListener, TcpListener), Error> {
             last.map(|e| e.to_string()).unwrap_or_default()
         ),
     ))
-}
-
-fn bind_parent(expected: Option<u32>) -> Result<(), Error> {
-    let Some(expected) = expected else {
-        return Ok(());
-    };
-    #[cfg(target_os = "linux")]
-    unsafe {
-        if expected <= 1 || libc::getppid() as u32 != expected {
-            return Err(Error::new(
-                "SESSION_PARENT",
-                "SDK parent PID differs from the actual process parent",
-            ));
-        }
-        if libc::prctl(libc::PR_SET_PDEATHSIG, libc::SIGTERM) != 0 {
-            return Err(Error::new(
-                "SESSION_PARENT",
-                format!("bind parent lifetime: {}", std::io::Error::last_os_error()),
-            ));
-        }
-        if libc::getppid() as u32 != expected {
-            return Err(Error::new(
-                "SESSION_PARENT",
-                "SDK parent exited during session startup",
-            ));
-        }
-        Ok(())
-    }
-    #[cfg(not(target_os = "linux"))]
-    {
-        Err(Error::new(
-            "UNSUPPORTED_PLATFORM",
-            "SDK parent lifetime binding is currently qualified on Linux only",
-        ))
-    }
 }
 
 pub(super) fn write_ready(out: &mut impl Write, ready: &Value, human: bool) -> std::io::Result<()> {

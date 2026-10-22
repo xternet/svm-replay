@@ -144,13 +144,15 @@ def qualify(inputs: Path, binary: Path, catalog_path: Path, source: Path,
             checked_file(test_cli, summary["binarySha256"])
             summary["transport"] = "PASS"
             summary["tests"] = list(EXPECTED_TESTS)
-        if sys.platform != "linux":
+        if sys.platform not in {"linux", "darwin"}:
             run("parent-lifetime-refusal", [binary, "session", "--request", descriptor,
                 "--data-dir", reports / "parent-refusal", "--json", "--parent-pid", os.getpid()],
-                expected_refusal="qualified on Linux only")
+                expected_refusal="requires Linux or macOS")
             summary["sdkParentLifetime"] = "UNSUPPORTED_PLATFORM"
         else:
-            summary["sdkParentLifetime"] = "covered separately by process integration tests"
+            run("parent-lifetime", [sys.executable, Path(__file__).with_name("session_parent.py"),
+                binary, descriptor, reports / "parent-lifetime"], seconds=120)
+            summary["sdkParentLifetime"] = "PASS before and after readiness; SIGKILL parent, owned CLI/workers gone"
         if digest(binary.read_bytes()) != summary["binarySha256"]:
             raise ValueError("session test build changed the qualified CLI binary")
         summary["status"] = "PASS"

@@ -27,8 +27,9 @@ Containers validate clean Linux userspaces on the same kernel/CPU, not other
 architectures or independent hardware. An older libc can reject at the ELF loader
 before the application runs; this is not a typed engine outcome. Current workers
 showed a GLIBC_2.38 loader requirement in the original negative check; supported
-release installation requires glibc >= 2.39. These are not competing support
-claims. Do not substitute newer host libraries in negative tests.
+candidate was built on Ubuntu 24.04. The release build baseline is Ubuntu 22.04
+(glibc 2.35); that does not retroactively qualify the older candidate. Do not
+substitute newer host libraries in negative tests.
 
 For trace checks, use a reviewed trace request with matching output/capture
 budgets, not a smaller ordinary-replay request. An output-limit rejection must

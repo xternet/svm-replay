@@ -36,8 +36,14 @@ def main() -> None:
 
     def command(argv, capture=False, **kwargs):
         print("Running:", json.dumps([str(arg) for arg in argv]), flush=True)
-        return subprocess.run([str(arg) for arg in argv], check=True, timeout=1200,
-                              capture_output=capture, **kwargs)
+        try:
+            return subprocess.run([str(arg) for arg in argv], check=True, timeout=1200,
+                                  capture_output=capture, **kwargs)
+        except subprocess.CalledProcessError as error:
+            for stream in (error.stdout, error.stderr):
+                if stream:
+                    print(stream.decode("utf-8", errors="replace"), file=sys.stderr, flush=True)
+            raise
 
     try:
         downloads = Path(os.environ["RUNNER_TEMP"]) / "svm-native-download"
@@ -45,7 +51,7 @@ def main() -> None:
             entry, _ = verify_download(downloads, source, "linux-x86_64")
             summary["archiveSha256"] = entry["sha256"]
         wsl = Path(os.environ["SystemRoot"]) / "System32/wsl.exe"
-        distro = [wsl, "--distribution", "Ubuntu-24.04", "--user", "root", "--"]
+        distro = [wsl, "--distribution", "Ubuntu-24.04", "--user", "root", "--exec"]
         command([wsl, "--install", "--distribution", "Ubuntu-24.04", "--no-launch", "--web-download"])
         kernel = command([*distro, "uname", "-r"], capture=True).stdout.decode("utf-8").strip()
         require_wsl2(kernel)
@@ -56,7 +62,7 @@ def main() -> None:
             return
 
         def guest_path(path):
-            return command([*distro, "wslpath", "-a", "-u", path.resolve()],
+            return command([*distro, "wslpath", "-a", "-u", path.resolve().as_posix()],
                            capture=True).stdout.decode("utf-8").strip()
 
         script = owner.joinpath("wsl_guest.sh").read_bytes().replace(b"\r\n", b"\n")

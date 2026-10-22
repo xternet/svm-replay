@@ -90,11 +90,24 @@ class ReleaseInputsTests(unittest.TestCase):
     def test_final_workflow_covers_six_targets_without_debug_skip(self):
         root = Path(os.environ["SVM_REPLAY_VALIDATION_SOURCE"])
         workflow = (root / ".github/workflows/ci.yml").read_text()
-        self.assertEqual(set(re.findall(r"^\s+- runner: (\S+)$", workflow, re.MULTILINE)),
-            {"ubuntu-24.04", "ubuntu-24.04-arm", "macos-15", "macos-15-intel",
+        native = workflow.split("  native-candidate:\n", 1)[1].split("  wsl-consumer:\n", 1)[0]
+        runners = json.loads(re.findall(r"'(\[.*?\])'", native)[1])
+        self.assertEqual(set(runners),
+            {"ubuntu-22.04", "ubuntu-22.04-arm", "macos-15", "macos-15-intel",
              "windows-2025", "windows-11-arm"})
         self.assertNotIn("RELEASE_ONLY", workflow)
         self.assertIn("NATIVE_SCOPE: all", workflow)
+
+    def test_posix_selection_does_not_readd_excluded_windows_jobs(self):
+        root = Path(os.environ["SVM_REPLAY_VALIDATION_SOURCE"])
+        workflow = (root / ".github/workflows/ci.yml").read_text()
+        for name in ("native-candidate", "clean-consumer"):
+            job = workflow.split(f"  {name}:\n", 1)[1].split("    runs-on:", 1)[0]
+            self.assertNotIn("exclude:", job)
+            lists = [json.loads(value) for value in re.findall(r"'(\[.*?\])'", job)]
+            self.assertEqual([len(value) for value in lists], [4, 6])
+            self.assertTrue(all(not runner.startswith("windows-") for runner in lists[0]))
+            self.assertEqual(lists[1][:4], lists[0])
 
     def test_full_capture_has_no_debugger_skip_switch(self):
         from native_capture import qualify

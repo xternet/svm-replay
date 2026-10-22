@@ -117,7 +117,7 @@ def main():
         run('cli-build', cargo + ['-p', 'svm-replay', '--bin', 'svm-replay'], coordinator)
         suffix = '.exe' if os.name == 'nt' else ''
         binary = work / ('target/release/svm-replay' + suffix)
-        require_binary_arch(binary, native_os, native_arch)
+        require_binary_arch(binary, native_os, native_arch, linux_baseline=sys.platform == 'linux')
         env['SVM_REPLAY_BOUNDARY_BINARY'] = str(binary)
         summary['binarySha256'] = digest(binary.read_bytes())
         run('launch', [str(binary), '--help'], ROOT, 30)
@@ -146,7 +146,7 @@ def main():
                    'platform': {'os': native_os, 'arch': native_arch},
                    'workers': []}
         if sys.platform == 'linux':
-            catalog['platform']['glibcMin'] = '2.39'
+            catalog['platform']['glibcMin'] = '2.35'
         for build in manifest['builds']:
             if build['kind'] != 'reference':
                 continue
@@ -155,7 +155,7 @@ def main():
             native_target = work / 'native-target'
             run('build-' + family, cargo + ['--target-dir', str(native_target), '--manifest-path', str(workers / build['manifest']), '--bin', package], workers, 1800)
             native_worker = work / ('native-target/release/' + package + suffix)
-            require_binary_arch(native_worker, native_os, native_arch)
+            require_binary_arch(native_worker, native_os, native_arch, linux_baseline=sys.platform == 'linux')
             summary.setdefault('workerSessionTests', []).append(
                 run_native_session_tests(run, coordinator, workers, build, work))
             worker_pin = digest(native_worker.read_bytes())

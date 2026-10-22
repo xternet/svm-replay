@@ -1,5 +1,6 @@
 """Refuse emulated toolchains and incorrectly labelled native executable headers."""
 import re
+import subprocess
 from pathlib import Path
 
 ARCHES = {"x86_64": "x86_64", "AMD64": "x86_64", "X64": "x86_64",
@@ -18,7 +19,16 @@ def require_native_host(text: str, system: str, machine: str, runner: str) -> st
     return expected
 
 
-def require_binary_arch(path: Path, system: str, architecture: str) -> None:
+def require_glibc_version(text: str) -> str:
+    versions = {tuple(int(part) for part in value.split("."))
+                for value in re.findall(r"\bGLIBC_([0-9]+(?:\.[0-9]+)+)\b", text)}
+    if not versions or max(versions) > (2, 35):
+        raise ValueError("Native Linux executable exceeds or lacks the glibc 2.35 baseline")
+    return ".".join(str(part) for part in max(versions))
+
+
+def require_binary_arch(path: Path, system: str, architecture: str,
+                        linux_baseline: bool = False) -> None:
     observed = None
     with path.open("rb") as stream:
         header = stream.read(64)
@@ -36,3 +46,9 @@ def require_binary_arch(path: Path, system: str, architecture: str) -> None:
                 observed = {0x8664: "x86_64", 0xAA64: "aarch64"}.get(int.from_bytes(coff[4:6], "little"))
     if observed != architecture:
         raise ValueError(f"Native binary architecture differs for {path.name}: expected {architecture}, found {observed}")
+    if linux_baseline:
+        if system != "linux":
+            raise ValueError("glibc qualification requires a native Linux executable")
+        text = subprocess.check_output(["readelf", "--version-info", str(path)],
+                                       stderr=subprocess.STDOUT, text=True, timeout=30)
+        require_glibc_version(text)

@@ -15,6 +15,11 @@ on:
         type: boolean
         required: false
         default: false
+      posix_only:
+        description: Requalify affected Linux/macOS targets; retain separate Windows evidence
+        type: boolean
+        required: false
+        default: false
 permissions:
   contents: read
 jobs:
@@ -105,19 +110,10 @@ jobs:
       fail-fast: false
       max-parallel: 6
       matrix:
-        include:
-          - runner: ubuntu-24.04
-            arch: x64
-          - runner: ubuntu-24.04-arm
-            arch: arm64
-          - runner: macos-15
-            arch: arm64
-          - runner: macos-15-intel
-            arch: x64
-          - runner: windows-2025
-            arch: x64
-          - runner: windows-11-arm
-            arch: arm64
+        runner: >-
+          ${{ fromJSON(inputs.posix_only &&
+          '["ubuntu-22.04","ubuntu-22.04-arm","macos-15","macos-15-intel"]' ||
+          '["ubuntu-22.04","ubuntu-22.04-arm","macos-15","macos-15-intel","windows-2025","windows-11-arm"]') }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: ${{ startsWith(matrix.runner, 'windows-') && 240 || 180 }}
     env:
@@ -135,12 +131,12 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '22.22.0'
-          architecture: ${{ matrix.arch }}
+          architecture: ${{ (contains(matrix.runner, 'arm') || matrix.runner == 'macos-15') && 'arm64' || 'x64' }}
       - name: Native Python
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
         with:
           python-version: '3.13'
-          architecture: ${{ matrix.arch }}
+          architecture: ${{ (contains(matrix.runner, 'arm') || matrix.runner == 'macos-15') && 'arm64' || 'x64' }}
       - name: Pinned native Rust
         run: rustup toolchain install 1.94.0 --profile minimal
       - name: Use Git Bash for the Windows shell-syntax test
@@ -199,19 +195,10 @@ jobs:
       fail-fast: false
       max-parallel: 6
       matrix:
-        include:
-          - runner: ubuntu-24.04
-            arch: x64
-          - runner: ubuntu-24.04-arm
-            arch: arm64
-          - runner: macos-15
-            arch: arm64
-          - runner: macos-15-intel
-            arch: x64
-          - runner: windows-2025
-            arch: x64
-          - runner: windows-11-arm
-            arch: arm64
+        runner: >-
+          ${{ fromJSON(inputs.posix_only &&
+          '["ubuntu-24.04","ubuntu-24.04-arm","macos-15","macos-15-intel"]' ||
+          '["ubuntu-24.04","ubuntu-24.04-arm","macos-15","macos-15-intel","windows-2025","windows-11-arm"]') }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 20
     env:
@@ -223,11 +210,11 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '22.22.0'
-          architecture: ${{ matrix.arch }}
+          architecture: ${{ (contains(matrix.runner, 'arm') || matrix.runner == 'macos-15') && 'arm64' || 'x64' }}
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
         with:
           python-version: '3.13'
-          architecture: ${{ matrix.arch }}
+          architecture: ${{ (contains(matrix.runner, 'arm') || matrix.runner == 'macos-15') && 'arm64' || 'x64' }}
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           name: native-candidate-${{ runner.os }}-${{ runner.arch }}
