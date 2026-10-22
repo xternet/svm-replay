@@ -12,6 +12,13 @@ from reuse_provenance import require_producer, verify_bundle, verify_source_reus
 
 
 class ReuseTests(unittest.TestCase):
+    def test_sdk_checkout_has_identical_text_on_windows_and_posix(self):
+        root = Path(os.environ["SVM_REPLAY_VALIDATION_SOURCE"])
+        names = ["README.md", "install.mjs", "installation.mjs", "launcher.mjs", "fork.mjs", "package.json"]
+        paths = ["src/bindings/typescript/" + name for name in names]
+        attributes = subprocess.check_output(["git", "check-attr", "eol", "--", *paths], cwd=root).decode().splitlines()
+        self.assertEqual(attributes, [path + ": eol: lf" for path in paths])
+
     def test_nested_session_build_owns_its_environment_without_inheriting_remap_flags(self):
         source = Path(__file__).with_name("reuse_candidate.py").read_text()
         calls = [node for node in ast.walk(ast.parse(source)) if isinstance(node, ast.Call)
