@@ -4,7 +4,7 @@ use svm_replay_engine::_1_resolve_runtime::load_catalog;
 use svm_replay_protocol::Digest;
 
 fn catalog(file: &str, digest: Digest) -> serde_json::Value {
-    json!({"schema":"svm-replay-workers/v1","platform":{"os":std::env::consts::OS,"arch":std::env::consts::ARCH,"glibcMin":if cfg!(target_os="linux") { Some("2.38") } else { None }},"workers":[{
+    json!({"schema":"svm-replay-workers/v1","platform":{"os":std::env::consts::OS,"arch":std::env::consts::ARCH,"glibcMin":if cfg!(target_os="linux") { Some("2.35") } else { None }},"workers":[{
         "family":"v4-2","file":file,"sha256":digest,"buildHash":Digest::of(b"build"),"sourceSha256":Digest::of(b"source"),
         "executorSourceId":"test-runtime","capabilities":["guarded-generic-sysvars/v1"]}]})
 }

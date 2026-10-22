@@ -20,7 +20,7 @@ pub(super) fn catalog(root: &Path) -> String {
     // Protocol/installer test, not a historical runtime qualification.
     fs::copy("/usr/bin/true", root.join("worker")).unwrap();
     let hash = Digest::of(fs::read(root.join("worker")).unwrap());
-    let value = json!({"schema":"svm-replay-workers/v1","platform":{"os":"linux","arch":std::env::consts::ARCH,"glibcMin":"2.38"},
+    let value = json!({"schema":"svm-replay-workers/v1","platform":{"os":"linux","arch":std::env::consts::ARCH,"glibcMin":"2.35"},
         "workers":[{"family":"v4-2","file":"worker","sha256":hash,"buildHash":hash,"sourceSha256":hash,
         "executorSourceId":"installer-test-only","capabilities":["protocol-test-only"]}]});
     let bytes = serde_json::to_vec(&value).unwrap();
