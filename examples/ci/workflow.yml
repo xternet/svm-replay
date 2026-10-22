@@ -25,11 +25,35 @@ on:
         type: boolean
         required: false
         default: false
+      reuse_run:
+        description: Reuse a successful same-repository native job instead of rebuilding workers
+        type: string
+        required: false
+        default: ''
+      reuse_hosts:
+        description: Retained native platform pair
+        type: choice
+        options: [macos, windows]
+        default: windows
+      refresh_coordinator:
+        description: Rebuild changed CLI only while retaining qualified workers
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
+  retained-native:
+    if: github.event_name == 'workflow_dispatch' && inputs.reuse_run != '' && !inputs.native && !inputs.wsl_probe
+    permissions:
+      contents: read
+      actions: read
+    uses: ./.github/workflows/reuse-candidate.yml
+    with:
+      source_run: ${{ inputs.reuse_run }}
+      hosts: ${{ inputs.reuse_hosts }}
+      refresh_coordinator: ${{ inputs.refresh_coordinator }}
   portable-sdk:
-    if: github.event_name != 'workflow_dispatch' || (!inputs.native && !inputs.wsl_probe)
+    if: github.event_name != 'workflow_dispatch' || (!inputs.native && !inputs.wsl_probe) && !inputs.reuse_run
     strategy:
       fail-fast: false
       matrix:
@@ -63,7 +87,7 @@ jobs:
         working-directory: src/bindings/typescript
         run: npm pack --dry-run
   offline-checks:
-    if: github.event_name != 'workflow_dispatch' || (!inputs.native && !inputs.wsl_probe)
+    if: github.event_name != 'workflow_dispatch' || (!inputs.native && !inputs.wsl_probe) && !inputs.reuse_run
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
