@@ -1,7 +1,7 @@
 // Representative whole-tool qualification; complete Linux regression is separate.
 import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
-import {cpSync, readFileSync, writeFileSync, mkdirSync} from 'node:fs';
+import {cpSync, readFileSync, writeFileSync, mkdirSync, readdirSync} from 'node:fs';
 import {join, resolve} from 'node:path';
 import {createRequire} from 'node:module';
 
@@ -58,7 +58,22 @@ try {
     assert.match(outputSdk, /3 passed; 0 failed; 0 ignored/);
   }
   run('studio-browser', process.execPath, [new URL('browser.mjs', import.meta.url).pathname]);
-} catch (error) {failure = error;}
+} catch (error) {
+  failure = error;
+  // Keep only bounded text child logs on failure, never wallets/cache payloads.
+  let count = 0;
+  const logs = directory => {
+    for (const entry of readdirSync(directory,{withFileTypes:true})) {
+      const path = join(directory,entry.name);
+      if (entry.isDirectory()) logs(path);
+      else if (entry.isFile() && entry.name === 'surfpool.log' && count < 16) {
+        const raw = readFileSync(path);
+        writeFileSync(join(work,'reports',`child-${count++}.log`),raw.subarray(0,1<<20));
+      }
+    }
+  };
+  logs(workspace);
+}
 writeFileSync(join(work, 'reports/summary.json'), JSON.stringify({
   status: failure ? 'FAIL' : 'PASS', platform: process.platform, arch: process.arch,
   kernel: process.env.TOOL_WSL_KERNEL, rows, error: failure ? String(failure) : null,
