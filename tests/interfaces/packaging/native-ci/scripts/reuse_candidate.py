@@ -34,9 +34,9 @@ def main() -> None:
     def save():
         (reports / "reuse-summary.json").write_text(json.dumps(summary, indent=2) + "\n")
 
-    def run(name, argv, cwd=source, seconds=600):
+    def run(name, argv, cwd=source, seconds=600, child_env=None):
         log = reports / (name + ".log")
-        result = command(argv, cwd, log, seconds, env)
+        result = command(argv, cwd, log, seconds, env if child_env is None else child_env)
         summary["checks"].append(dict(result, name=name))
         save()
         print(json.dumps(dict(result, name=name)), flush=True)
@@ -83,6 +83,11 @@ def main() -> None:
                 "--jobs", "4", "-p", "svm-replay", "--bin", "svm-replay"], seconds=1800)
             built = work / "target/release" / binary.name
             require_binary_arch(built, system, arch)
+            retained_cli = reports / "coordinator"
+            retained_cli.mkdir()
+            shutil.copy2(built, retained_cli / binary.name)
+            summary["coordinatorBuild"] = {"sourceCommit": actual, "sha256": digest(built)}
+            save()
             shutil.copy2(built, binary)
             row = next(row for row in manifest["files"] if row["path"] == manifest["binary"])
             row.update(sha256=digest(binary), bytes=binary.stat().st_size)
@@ -106,7 +111,8 @@ def main() -> None:
             run("reuse-session", [sys.executable, str(Path(__file__).with_name("native_sessions.py")),
                 "--inputs", str(root / "inputs/session"), "--binary", str(binary),
                 "--catalog", str(bundle / "catalog.json"), "--source", str(source),
-                "--target", str(work / "target"), "--reports", str(reports / "native-sessions")], seconds=1200)
+                "--target", str(work / "target"), "--reports", str(reports / "native-sessions")],
+                seconds=1200, child_env=os.environ.copy())
         verify_bundle(bundle)
         if workers != [row for row in manifest["files"] if row["path"].startswith("workers/")]:
             raise ValueError("Retained workers changed during coordinator qualification")

@@ -6,11 +6,21 @@ import os
 import subprocess
 import tempfile
 import unittest
+import ast
 from pathlib import Path
 from reuse_provenance import require_producer, verify_bundle, verify_source_reuse
 
 
 class ReuseTests(unittest.TestCase):
+    def test_nested_session_build_owns_its_environment_without_inheriting_remap_flags(self):
+        source = Path(__file__).with_name("reuse_candidate.py").read_text()
+        calls = [node for node in ast.walk(ast.parse(source)) if isinstance(node, ast.Call)
+                 and isinstance(node.func, ast.Name) and node.func.id == "run" and node.args
+                 and isinstance(node.args[0], ast.Constant) and node.args[0].value == "reuse-session"]
+        self.assertEqual(len(calls), 1)
+        environments = [keyword.value for keyword in calls[0].keywords if keyword.arg == "child_env"]
+        self.assertEqual([ast.unparse(value) for value in environments], ["os.environ.copy()"])
+
     def test_only_successful_same_repository_native_job_is_accepted(self):
         run = {"head_sha": "a" * 40, "head_branch": "0.2.0", "event": "workflow_dispatch",
                "path": ".github/workflows/ci.yml",

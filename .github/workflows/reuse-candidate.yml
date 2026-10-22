@@ -78,6 +78,7 @@ jobs:
             tests/interfaces/packaging/native-ci/reports/*summary.json
             tests/interfaces/packaging/native-ci/reports/updated/*
             tests/interfaces/packaging/native-ci/reports/sdk-current/*.tgz
+            tests/interfaces/packaging/native-ci/reports/coordinator/*
             tests/interfaces/packaging/native-ci/reports/native-sessions/*.log
             tests/interfaces/packaging/native-ci/reports/native-sessions/summary.json
           retention-days: 1
