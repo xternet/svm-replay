@@ -1,0 +1,122 @@
+name: Reviewed tool platform qualification
+on:
+  push:
+    branches: ['0.2.0']
+    paths: ['.github/workflows/tool-integration.yml', 'tests/interfaces/integrations/tools/**']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  mac:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            platform: macos-aarch64
+            artifact: retained-native-macOS-ARM64
+          - os: macos-15-intel
+            platform: macos-x86_64
+            artifact: retained-native-macOS-X64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    env:
+      CARGO_BUILD_JOBS: '2'
+      CARGO_PROFILE_DEV_DEBUG: '0'
+      CARGO_PROFILE_TEST_DEBUG: '0'
+      CARGO_INCREMENTAL: '0'
+      ANCHOR_SOURCE: ${{ github.workspace }}/anchor
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: xternet/surfpool
+          ref: a6818b744de5f386b4c2f873f3a32caf05b7f2c7
+          path: surfpool
+          persist-credentials: false
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: xternet/anchor
+          ref: 9a9d6eed2ca591f50faa3f75291e14eae35e1055
+          path: anchor
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22.22.0'
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.13'
+      - name: Initialize private job paths
+        run: |
+          echo "CARGO_TARGET_DIR=$RUNNER_TEMP/tool-target" >> "$GITHUB_ENV"
+          echo "TOOL_WORK=$RUNNER_TEMP/tools" >> "$GITHUB_ENV"
+          echo "STUDIO_UI_DIST=$RUNNER_TEMP/tools/studio.zip" >> "$GITHUB_ENV"
+          echo "SURFPOOL_BIN=$RUNNER_TEMP/tool-target/debug/surfpool" >> "$GITHUB_ENV"
+          echo "ANCHOR_BIN=$RUNNER_TEMP/tool-target/debug/anchor" >> "$GITHUB_ENV"
+          echo "PLAYWRIGHT_ROOT=$RUNNER_TEMP/browser" >> "$GITHUB_ENV"
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          github-token: ${{ github.token }}
+          repository: xternet/svm-replay
+          run-id: 39789180250
+          name: ${{ matrix.artifact }}
+          path: ${{ runner.temp }}/native
+      - name: Verify selected inputs and install without rebuilding workers
+        env:
+          TOOL_PLATFORM: ${{ matrix.platform }}
+        run: python tests/interfaces/integrations/tools/prepare.py "$TOOL_PLATFORM" "$RUNNER_TEMP/native" "$TOOL_WORK"
+      - name: Build the reviewed tool sources and original historical SDK tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.97.1 --profile minimal
+          export RUSTUP_TOOLCHAIN=1.97.1
+          cargo build --locked --manifest-path surfpool/Cargo.toml -p surfpool-cli --bin surfpool
+          cargo test --locked --manifest-path surfpool/Cargo.toml -p surfpool-sdk --test historical --no-run --message-format=json > "$TOOL_WORK/sdk-build.jsonl"
+          cargo build --locked --manifest-path anchor/Cargo.toml -p anchor-cli --bin anchor
+          cargo test --locked --manifest-path anchor/Cargo.toml -p anchor-cli --lib
+          npm install --prefix "$PLAYWRIGHT_ROOT" --no-audit --no-fund playwright@1.56.1
+          "$PLAYWRIGHT_ROOT/node_modules/.bin/playwright" install chromium
+      - name: Real transactions, Anchor tests and rendered Studio under a network sandbox
+        shell: bash
+        run: |
+          set -euo pipefail
+          export RUSTUP_TOOLCHAIN=1.97.1
+          export PATH="$(dirname "$SURFPOOL_BIN"):$PATH"
+          export HISTORICAL_TEST_BINARY
+          HISTORICAL_TEST_BINARY=$(python -c 'import json,os; r=[json.loads(l) for l in open(os.environ["TOOL_WORK"]+"/sdk-build.jsonl")]; a=[v["executable"] for v in r if v.get("target",{}).get("name")=="historical" and v.get("executable")]; assert len(a)==1; print(a[0])')
+          sandbox-exec -p '(version 1)(allow default)(deny network-outbound)(allow network-outbound (remote ip "localhost:*"))' node tests/interfaces/integrations/tools/run.mjs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: tool-qualification-${{ matrix.platform }}
+          path: ${{ runner.temp }}/tools/reports/*
+          retention-days: 1
+  wsl-browser:
+    runs-on: windows-2025
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.13'
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          github-token: ${{ github.token }}
+          repository: xternet/svm-replay
+          run-id: 39780040931
+          name: native-candidate-Linux-X64
+          path: ${{ runner.temp }}/native
+      - name: Render Studio in actual WSL2 Chromium
+        run: python tests/interfaces/integrations/tools/wsl.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: tool-qualification-wsl2-browser
+          path: ${{ runner.temp }}/wsl-tool-reports/*
+          retention-days: 1

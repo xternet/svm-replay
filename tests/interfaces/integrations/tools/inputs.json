@@ -1,0 +1,12 @@
+{
+  "native": {
+    "macos-aarch64": {"name": "svm-replay-0.2.0-macos-aarch64.tar.gz", "sha256": "312508a32bdcb35a5ab5ec978eef70295a0a827ed5252f3cdc5649adb3b7d486"},
+    "macos-x86_64": {"name": "svm-replay-0.2.0-macos-x86_64.tar.gz", "sha256": "49a06272798921de1003fc6b28ee69d9c4e36db22fb5c50d2870060b75cdcce8"},
+    "linux-x86_64": {"name": "svm-replay-0.2.0-linux-x86_64.tar.gz", "sha256": "f672c969479a7089fbb0a6eaa9db8cd4bd6018e186f9b5b3af0fe9293857c7c2"}
+  },
+  "inputs": {
+    "fixture.tar.gz": {"name": "svm-replay-smoke-413023260.tar.gz", "sha256": "41077d196181a6f5172e0e8858a098a52174afc43a12abb4d2df8e61599356f5"},
+    "toy.tar.gz": {"name": "tool-smoke-v1.tar.gz", "sha256": "54e18a97813380c003d7ad7c0aa14e6d441266812ad01f41e586e5c005a4b89d"},
+    "studio.zip": {"name": "studio-dist.zip", "sha256": "fec4dfc86c5e32b27ec34538c56ac7862892c29082ea4f1a9a62753d76c2230c"}
+  }
+}
