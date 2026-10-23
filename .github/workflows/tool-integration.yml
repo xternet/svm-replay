@@ -47,7 +47,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           repository: xternet/anchor
-          ref: cd97ecb4197627c20ca53acd866e2bc9668ebed8
+          ref: 288cca71a754556debde34b7c465092dbe5f84da
           path: anchor
           persist-credentials: false
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020

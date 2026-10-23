@@ -7,7 +7,7 @@ import shutil
 import sys
 
 SOURCES = {'surfpool':'33262045b129d2c722178b8436035cc957d44bee',
-           'anchor':'cd97ecb4197627c20ca53acd866e2bc9668ebed8'}
+           'anchor':'288cca71a754556debde34b7c465092dbe5f84da'}
 
 
 def digest(path):
